@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <%- include('../../partials/script') %>
+    <%- include('../../../partials/script') %>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
@@ -20,7 +21,7 @@
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased font-sans">
-    <%- include('../../partials/header') %>
+    <%- include('../../../partials/header') %>
 
     <div id="vue-app" class="w-full px-4 sm:px-6 lg:px-8 py-5 pb-28" v-cloak>
         
@@ -45,43 +46,77 @@
                 </div>
             </div>
 
-            <!-- Action Navigation Links -->
-            <div class="flex items-center flex-wrap gap-2 text-xs">
-                <!-- Global Connection Mode Switcher -->
-                <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-300 shadow-sm">
-                    <span class="px-2 text-slate-500 text-[11px] font-bold hidden sm:inline">DB Mode:</span>
+            <!-- Action Navigation Links (Grouped Categorically) -->
+            <div class="flex items-center flex-wrap gap-2.5 text-xs">
+                
+                <!-- Group 1: Environment & AI Connection -->
+                <div class="flex items-center bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                    <!-- DB Mode Segmented Switcher -->
+                    <div class="flex items-center bg-slate-100/90 p-0.5 rounded-lg border border-slate-200/70">
+                        <button 
+                            @click="setGlobalEnv('production')" 
+                            :class="['px-2.5 py-1.5 rounded-md transition text-xs font-bold flex items-center gap-1.5 cursor-pointer', globalEnv === 'production' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900']"
+                            title="สลับทุก Step เป็น Production Database (BITINTRA_REAL)"
+                        >
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-300"></span> Production
+                        </button>
+                        <button 
+                            @click="setGlobalEnv('development')" 
+                            :class="['px-2.5 py-1.5 rounded-md transition text-xs font-bold flex items-center gap-1.5 cursor-pointer', globalEnv === 'development' ? 'bg-amber-500 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900']"
+                            title="สลับทุก Step เป็น Development Database (BITINTRADEV)"
+                        >
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-200"></span> Development
+                        </button>
+                    </div>
+
+                    <div class="h-4 w-[1px] bg-slate-200 mx-1 hidden sm:block"></div>
+
+                    <!-- Open Claw Config Button -->
                     <button 
-                        @click="setGlobalEnv('production')" 
-                        :class="['px-3 py-1.5 rounded-lg transition text-xs font-bold flex items-center gap-1.5', globalEnv === 'production' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900']"
-                        title="สลับทุก Step เป็น Production Database"
+                        @click="showOpenClawConfigModal = true" 
+                        title="ตั้งค่าเชื่อมต่อ Belton AI (Open Claw)"
+                        class="px-2.5 py-1.5 rounded-lg text-rose-700 hover:bg-rose-50 font-bold transition flex items-center gap-1.5 text-xs cursor-pointer"
                     >
-                        <span class="w-2 h-2 rounded-full bg-emerald-300"></span> Production
-                    </button>
-                    <button 
-                        @click="setGlobalEnv('development')" 
-                        :class="['px-3 py-1.5 rounded-lg transition text-xs font-bold flex items-center gap-1.5', globalEnv === 'development' ? 'bg-amber-500 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900']"
-                        title="สลับทุก Step เป็น Development Database"
-                    >
-                        <span class="w-2 h-2 rounded-full bg-amber-200"></span> Development
+                        <span>🤖</span> Open Claw
+                        <span v-if="openClawCookie" class="w-2 h-2 rounded-full bg-emerald-500 shadow-xs" title="ตั้งค่า Cookie แล้ว"></span>
+                        <span v-else class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" title="ยังไม่ได้ใส่ Cookie"></span>
                     </button>
                 </div>
 
-                <button 
-                    @click="showAllTroubleshootingModal = true" 
-                    title="เปิดดูคู่มือสรุปจุดเสี่ยงและวิธีแก้ข้อมูลให้ผ่านครบทั้ง 10 Steps"
-                    class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-3 py-2 rounded-lg border border-indigo-200 shadow-xs transition flex items-center gap-1.5 text-xs"
-                >
-                    <span>🛠️</span> คู่มือแก้ Error (10 Steps)
-                </button>
+                <!-- Group 2: Tools & Knowledge -->
+                <div class="flex items-center bg-white p-1 rounded-xl border border-slate-200 shadow-2xs divide-x divide-slate-100">
+                    <button 
+                        @click="showAllTroubleshootingModal = true" 
+                        title="เปิดดูคู่มือสรุปจุดเสี่ยงและวิธีแก้ข้อมูลให้ผ่านครบทั้ง 10 Steps"
+                        class="px-2.5 py-1.5 rounded-lg text-indigo-700 hover:bg-indigo-50 font-bold transition flex items-center gap-1.5 text-xs cursor-pointer"
+                    >
+                        <span>🛠️</span> คู่มือแก้ Error
+                    </button>
 
-                <a href="/debug-fca-advanced" class="bg-white hover:bg-slate-100 text-slate-700 font-medium px-3 py-2 rounded-lg border border-slate-300 shadow-sm transition flex items-center gap-1.5">
-                    <span>📊</span> โหมด Batch Analysis
-                </a>
-                <a href="/fca-flow" class="bg-white hover:bg-slate-100 text-slate-700 font-medium px-3 py-2 rounded-lg border border-slate-300 shadow-sm transition flex items-center gap-1.5">
-                    <span>📖</span> เอกสารโครงสร้าง Flow
-                </a>
-                <a href="/main_menu" class="bg-slate-800 hover:bg-slate-900 text-white font-medium px-3.5 py-2 rounded-lg shadow-sm transition flex items-center gap-1.5">
-                    ← เมนูหลัก
+                    <a 
+                        href="/debug-fca-advanced" 
+                        class="px-2.5 py-1.5 rounded-lg text-slate-700 hover:bg-slate-50 font-semibold transition flex items-center gap-1.5 text-xs"
+                        title="โหมดวิเคราะห์ DO แบบชุด (Batch)"
+                    >
+                        <span>📊</span> Batch Mode
+                    </a>
+
+                    <a 
+                        href="/fca-flow" 
+                        class="px-2.5 py-1.5 rounded-lg text-slate-700 hover:bg-slate-50 font-semibold transition flex items-center gap-1.5 text-xs"
+                        title="เอกสารและโครงสร้าง Flow"
+                    >
+                        <span>📖</span> ผัง Flow
+                    </a>
+                </div>
+
+                <!-- Group 3: Navigation -->
+                <a 
+                    href="/main_menu" 
+                    class="bg-slate-800 hover:bg-slate-900 text-white font-semibold px-3.5 py-2 rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs shrink-0"
+                    title="กลับสู่หน้าหลัก"
+                >
+                    <span>← เมนูหลัก</span>
                 </a>
             </div>
         </div>
@@ -381,21 +416,42 @@
                             <p class="text-slate-500 text-[11px] leading-relaxed">{{ activeStep.description }}</p>
                         </div>
 
-                        <!-- Manual Step Test Action Bar -->
-                        <div class="bg-indigo-50/70 p-3 rounded-xl border border-indigo-200/80 flex items-center justify-between gap-2 shadow-2xs">
-                            <div>
-                                <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-700 block">Manual Step Test</span>
-                                <span class="font-semibold text-slate-800 text-xs">ทดสอบรันเฉพาะ Step {{ activeStep.stepNum }}</span>
+                        <!-- Manual Step Test & AI Diagnose Action Bar -->
+                        <div class="space-y-2">
+                            <!-- Standard Manual Step Test -->
+                            <div class="bg-indigo-50/70 p-3 rounded-xl border border-indigo-200/80 flex items-center justify-between gap-2 shadow-2xs">
+                                <div>
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-700 block">Manual Step Test</span>
+                                    <span class="font-semibold text-slate-800 text-xs">ทดสอบรันเฉพาะ Step {{ activeStep.stepNum }}</span>
+                                </div>
+                                <button 
+                                    @click="runSingleStep(activeStep)" 
+                                    :disabled="!selectedDO || runningStepNum === activeStep.stepNum" 
+                                    class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-xs transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                                >
+                                    <span v-if="runningStepNum === activeStep.stepNum" class="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full"></span>
+                                    <span v-else>▶</span>
+                                    <span>{{ runningStepNum === activeStep.stepNum ? 'กำลังรัน...' : 'รันเฉพาะขั้นนี้' }}</span>
+                                </button>
                             </div>
-                            <button 
-                                @click="runSingleStep(activeStep)" 
-                                :disabled="!selectedDO || runningStepNum === activeStep.stepNum" 
-                                class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-xs transition flex items-center gap-1.5 disabled:opacity-50"
-                            >
-                                <span v-if="runningStepNum === activeStep.stepNum" class="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full"></span>
-                                <span v-else>▶</span>
-                                <span>{{ runningStepNum === activeStep.stepNum ? 'กำลังรัน...' : 'รันเฉพาะขั้นนี้' }}</span>
-                            </button>
+
+                            <!-- Quick AI Ask Shortcut in Inspector -->
+                            <div class="bg-gradient-to-r from-rose-950/30 via-slate-900/30 to-indigo-950/30 p-2.5 rounded-xl border border-rose-500/30 flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-lg bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-xs">🤖</span>
+                                    <div>
+                                        <span class="text-[11px] font-bold text-rose-700 block">AI Assistant Chat</span>
+                                        <span class="text-[10px] text-slate-500 block">ถาม AI ด้านล่างเกี่ยวกับ Step {{ activeStep.stepNum }}</span>
+                                    </div>
+                                </div>
+                                <button 
+                                    @click="askAIChatAboutStep(activeStep)" 
+                                    class="bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                                >
+                                    <span>💬</span>
+                                    <span>ถาม AI ด้านล่าง</span>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Connection Switcher Box in Inspector -->
@@ -488,76 +544,125 @@
                             </div>
                         </div>
 
-                        <!-- Step Error Resolution & Troubleshooting Guide (หัวข้อวิธีแก้ไขเมื่อพบ Error) -->
-                        <div v-if="getStepTroubleshooting(activeStep.stepNum)" class="mt-4 pt-3 border-t border-slate-200">
+                        <!-- Step Status: SUCCESS Banner (เมื่อ Step ผ่านเรียบร้อย ไม่ต้องแสดงกล่อง Error รกหน้าจอ) -->
+                        <div v-if="activeStep.status === 'success'" class="mt-4 pt-3 border-t border-slate-200">
+                            <div class="bg-emerald-50/90 border border-emerald-200/90 p-3 rounded-xl flex items-center justify-between shadow-2xs">
+                                <div class="flex items-center gap-2 text-emerald-800 text-xs font-semibold">
+                                    <span class="text-base">✅</span>
+                                    <span>Step {{ activeStep.stepNum }} ผ่านการตรวจสอบสมบูรณ์ (ไม่พบ Error ในขั้นนี้)</span>
+                                </div>
+                                <button 
+                                    @click="showAllTroubleshootingModal = true" 
+                                    title="คลิกเพื่อเปิดดูสรุปจุดเสี่ยงและคู่มือทั้ง 10 Steps"
+                                    class="text-[10.5px] text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1 hover:underline cursor-pointer bg-white px-2 py-0.5 rounded border border-emerald-200"
+                                >
+                                    <span>📋</span> ดูคู่มือ 10 Steps
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Step Status: IDLE / RUNNING (เมื่อยังไม่ได้เริ่มทดสอบ หรือกำลังรัน) -->
+                        <div v-else-if="activeStep.status === 'idle' || activeStep.status === 'running'" class="mt-4 pt-3 border-t border-slate-200">
+                            <div class="bg-slate-50 border border-slate-200/90 p-3 rounded-xl flex items-center justify-between text-xs text-slate-500">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base">{{ activeStep.status === 'running' ? '⏳' : 'ℹ️' }}</span>
+                                    <span>{{ activeStep.status === 'running' ? 'กำลังประมวลผลการวิเคราะห์...' : 'ยังไม่ได้เริ่มการวิเคราะห์ขั้นตอนนี้ (กดปุ่ม "รันเฉพาะขั้นนี้" เพื่อทดสอบ)' }}</span>
+                                </div>
+                                <button 
+                                    @click="showAllTroubleshootingModal = true" 
+                                    title="เปิดดูคู่มือข้อกำหนดทั้ง 10 Steps"
+                                    class="text-[10px] text-indigo-600 hover:underline font-bold"
+                                >
+                                    คู่มือ 10 Steps
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Step Status: ERROR & WARNING Resolution & Dynamic Root Cause Analysis (แสดงเฉพาะเมื่อพบ Error หรือ Warning จริง) -->
+                        <div v-else-if="activeStep.status === 'error' || activeStep.status === 'warning'" class="mt-4 pt-3 border-t border-rose-200">
                             <div class="flex items-center justify-between mb-2">
-                                <span class="font-bold text-slate-800 flex items-center gap-1.5 text-xs text-indigo-950">
-                                    <span>🛠️</span> วิธีแก้ไขเมื่อพบ Error (Step {{ activeStep.stepNum }})
+                                <span class="font-bold text-rose-950 flex items-center gap-1.5 text-xs">
+                                    <span class="animate-pulse text-sm">🚨</span> การวิเคราะห์สาเหตุและวิธีแก้ไขเฉพาะจุด (Step {{ activeStep.stepNum }})
                                 </span>
                                 <button 
                                     @click="showAllTroubleshootingModal = true" 
                                     title="คลิกเพื่อเปิดดูสรุปจุดเสี่ยงและวิธีแก้ปัญหาครบทั้ง 10 Steps"
-                                    class="text-[10px] text-indigo-600 hover:text-indigo-800 hover:underline font-bold flex items-center gap-1 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-200"
+                                    class="text-[10px] text-rose-700 hover:text-rose-900 hover:underline font-bold flex items-center gap-1 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200"
                                 >
                                     <span>📋</span> ดูสรุปทั้ง 10 Steps
                                 </button>
                             </div>
 
-                            <div class="bg-gradient-to-br from-slate-50 to-indigo-50/40 p-3.5 rounded-xl border border-indigo-100/90 space-y-2.5 shadow-2xs">
-                                <!-- Target DB & Table -->
+                            <div class="bg-gradient-to-br from-rose-50/80 via-white to-amber-50/40 p-3.5 rounded-xl border border-rose-200/90 space-y-3 shadow-2xs">
+                                
+                                <!-- 1. Detected Specific Root Cause (สาเหตุจริงที่ตรวจพบจากการรัน) -->
+                                <div class="bg-rose-100/70 border border-rose-300/80 p-2.5 rounded-lg">
+                                    <div class="flex items-center gap-1.5 text-rose-900 font-bold text-[11px] mb-1">
+                                        <span>⚠️</span>
+                                        <span>สาเหตุที่ตรวจพบ (Detected Root Cause):</span>
+                                    </div>
+                                    <p class="text-[11px] text-rose-900 font-medium leading-relaxed font-sans">
+                                        {{ getDynamicStepAnalysis(activeStep).detectedCause }}
+                                    </p>
+                                </div>
+
+                                <!-- 2. Target DB & Table -->
                                 <div class="flex items-start gap-2">
                                     <span class="w-4 h-4 rounded bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">🎯</span>
                                     <div class="min-w-0 flex-1">
                                         <span class="text-[10.5px] font-bold text-slate-700 block">ตารางและฐานข้อมูลที่ต้องแก้ไข:</span>
-                                        <span class="text-[11px] font-mono text-indigo-700 bg-white px-1.5 py-0.5 rounded border border-indigo-200 inline-block mt-0.5 font-bold">
-                                            {{ getStepTroubleshooting(activeStep.stepNum).table }}
+                                        <span class="text-[11px] font-mono text-indigo-800 bg-white px-1.5 py-0.5 rounded border border-indigo-200 inline-block mt-0.5 font-bold">
+                                            {{ getDynamicStepAnalysis(activeStep).table }}
                                         </span>
-                                        <span class="text-[10px] text-slate-500 ml-1 font-sans">({{ getStepTroubleshooting(activeStep.stepNum).db }})</span>
+                                        <span class="text-[10px] text-slate-500 ml-1 font-sans">({{ getDynamicStepAnalysis(activeStep).db }})</span>
                                     </div>
                                 </div>
 
-                                <!-- Risk / Script Impact -->
+                                <!-- 3. Risk / Script Impact -->
                                 <div class="flex items-start gap-2">
                                     <span class="w-4 h-4 rounded bg-amber-100 text-amber-800 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">⚡</span>
                                     <div class="min-w-0 flex-1">
                                         <span class="text-[10.5px] font-bold text-slate-700 block">ผลกระทบต่อ Script:</span>
-                                        <span class="text-[10.5px] text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 block mt-0.5 font-sans leading-tight">
-                                            {{ getStepTroubleshooting(activeStep.stepNum).risk }}
+                                        <span class="text-[10.5px] text-amber-950 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 block mt-0.5 font-sans leading-tight">
+                                            {{ getDynamicStepAnalysis(activeStep).risk }}
                                         </span>
                                     </div>
                                 </div>
 
-                                <!-- Error Causes -->
-                                <div class="flex items-start gap-2">
-                                    <span class="w-4 h-4 rounded bg-rose-100 text-rose-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">⚠️</span>
-                                    <div class="min-w-0 flex-1">
-                                        <span class="text-[10.5px] font-bold text-slate-700 block">สาเหตุที่ทำให้ Script ล้มเหลว (Root Causes):</span>
-                                        <ul class="list-disc list-inside text-[10.5px] text-slate-600 mt-0.5 space-y-0.5 leading-relaxed pl-1">
-                                            <li v-for="(cause, cIdx) in getStepTroubleshooting(activeStep.stepNum).causes" :key="cIdx">
-                                                {{ cause }}
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-
-                                <!-- How to Fix -->
+                                <!-- 4. Pinpointed Actionable Fix Steps (ขั้นตอนการแก้ไขที่ตรงจุด) -->
                                 <div class="flex items-start gap-2">
                                     <span class="w-4 h-4 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">💡</span>
                                     <div class="min-w-0 flex-1">
-                                        <span class="text-[10.5px] font-bold text-slate-700 block">ขั้นตอนการแก้ไขข้อมูลเพื่อให้ Step นี้ผ่าน:</span>
-                                        <ol class="list-decimal list-inside text-[10.5px] text-slate-700 mt-0.5 space-y-0.5 leading-relaxed font-medium pl-1">
-                                            <li v-for="(step, sIdx) in getStepTroubleshooting(activeStep.stepNum).fixSteps" :key="sIdx">
+                                        <span class="text-[10.5px] font-bold text-slate-700 block">ขั้นตอนการแก้ไขข้อมูลให้ตรงจุด:</span>
+                                        <ol class="list-decimal list-inside text-[10.5px] text-slate-700 mt-0.5 space-y-1 leading-relaxed font-medium pl-1">
+                                            <li v-for="(step, sIdx) in getDynamicStepAnalysis(activeStep).fixSteps" :key="sIdx">
                                                 {{ step }}
                                             </li>
                                         </ol>
                                     </div>
                                 </div>
 
-                                <!-- Owner Team -->
-                                <div class="flex items-center justify-between pt-2 border-t border-indigo-100 text-[10px]">
+                                <!-- 5. Suggested SQL query if available -->
+                                <div v-if="getDynamicStepAnalysis(activeStep).suggestedSql" class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-[10px] text-emerald-400 font-mono font-bold flex items-center gap-1">
+                                            <span>⚡</span> คำสั่ง SQL ที่แนะนำสำหรับตรวจสอบ/แก้ไข:
+                                        </span>
+                                        <button 
+                                            @click="copyText(getDynamicStepAnalysis(activeStep).suggestedSql)"
+                                            class="text-[9px] bg-slate-800 hover:bg-slate-700 text-slate-200 px-1.5 py-0.5 rounded font-mono"
+                                        >
+                                            คัดลอก SQL
+                                        </button>
+                                    </div>
+                                    <pre class="text-[10px] font-mono text-emerald-300 overflow-x-auto whitespace-pre-wrap select-all">{{ getDynamicStepAnalysis(activeStep).suggestedSql }}</pre>
+                                </div>
+
+                                <!-- 6. Owner Team -->
+                                <div class="flex items-center justify-between pt-2 border-t border-rose-100 text-[10px]">
                                     <span class="text-slate-500 font-medium">ฝ่าย/ทีมงานที่รับผิดชอบ:</span>
-                                    <span class="font-bold text-indigo-700 bg-white px-2 py-0.5 rounded border border-indigo-200">
-                                        👤 {{ getStepTroubleshooting(activeStep.stepNum).owner }}
+                                    <span class="font-bold text-rose-800 bg-white px-2 py-0.5 rounded border border-rose-200">
+                                        👤 {{ getDynamicStepAnalysis(activeStep).owner }}
                                     </span>
                                 </div>
                             </div>
@@ -575,6 +680,360 @@
                 </div>
             </div>
 
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- Belton AI Assistant (Open Claw) Interactive Chat Console -->
+        <!-- ======================================================== -->
+        <div id="ai-chat-section" class="mb-6 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-slate-800 transition-all duration-300">
+            <!-- Top Gradient Accent Line -->
+            <div class="h-1 bg-gradient-to-r from-rose-500 via-indigo-500 to-emerald-500"></div>
+
+            <!-- Header -->
+            <div class="p-4 bg-slate-50/70 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="relative shrink-0">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-500 to-indigo-600 flex items-center justify-center text-xl shadow-xs text-white">
+                            🤖
+                        </div>
+                        <!-- Live Status Dot -->
+                        <span :class="['absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white', openClawCookie ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse']" :title="openClawCookie ? 'พร้อมใช้งาน (Cookie พร้อม)' : 'ยังไม่ได้ระบุ Cookie'"></span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-extrabold text-sm tracking-tight text-slate-800">Belton AI Assistant</span>
+                            <span class="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full font-mono font-semibold">Open Claw AI</span>
+                            <span v-if="selectedDO" class="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded font-mono font-semibold">
+                                DO: {{ selectedDO.do }}
+                            </span>
+                            <span v-if="activeStep" class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded font-mono font-semibold">
+                                Step {{ activeStep.stepNum }} ({{ activeStep.sublabel || activeStep.name }})
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-0.5">
+                            ผู้ช่วย AI วิเคราะห์ WMS Ship Confirm, สอบถามปัญหา SQL, ตรวจสอบ Missing Data และขอคำสั่ง SQL Fix Script
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Header Action Buttons -->
+                <div class="flex items-center gap-2 self-end md:self-auto">
+                    <button 
+                        @click="showOpenClawConfigModal = true" 
+                        class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                        title="ตั้งค่าการเชื่อมต่อ Open Claw"
+                    >
+                        <span>⚙️</span>
+                        <span>ตั้งค่า</span>
+                    </button>
+                    <button 
+                        @click="clearChatMessages" 
+                        class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200 hover:border-rose-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                        title="ล้างประวัติการสนทนา"
+                    >
+                        <span>🗑️</span>
+                        <span>ล้างแชท</span>
+                    </button>
+                    <button 
+                        @click="isAIChatCollapsed = !isAIChatCollapsed" 
+                        class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold transition cursor-pointer shadow-2xs"
+                        :title="isAIChatCollapsed ? 'ขยายหน้าต่างแชท' : 'ย่อหน้าต่างแชท'"
+                    >
+                        <span>{{ isAIChatCollapsed ? '▼ ขยาย' : '▲ ย่อ' }}</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Body Container (Collapsible) -->
+            <div v-show="!isAIChatCollapsed" class="p-4 space-y-3 bg-white">
+                
+                <!-- Quick Prompt Action Chips -->
+                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                    <span class="text-[11px] font-bold text-slate-500 shrink-0 flex items-center gap-1">
+                        💡 คำถามด่วน:
+                    </span>
+                    <button 
+                        v-if="activeStep"
+                        @click="sendQuickPrompt(`วิเคราะห์ข้อผิดพลาดของ Step ${activeStep.stepNum} (${activeStep.name}) และบอกสาเหตุที่แท้จริงพร้อมวิธีแก้`)" 
+                        :disabled="isChatSending" 
+                        class="shrink-0 bg-white hover:bg-rose-50 border border-rose-200 hover:border-rose-300 text-rose-700 px-2.5 py-1 rounded-lg text-[11px] font-medium transition cursor-pointer disabled:opacity-50 flex items-center gap-1 shadow-2xs"
+                    >
+                        <span>⚡</span>
+                        <span>วิเคราะห์ Step {{ activeStep.stepNum }}</span>
+                    </button>
+                    <button 
+                        @click="sendQuickPrompt('ตรวจสอบ Error ทุกขั้นตอนของ DO นี้ และบอกว่าขั้นตอนไหนที่ทำให้การส่งข้อมูลล้มเหลว')" 
+                        :disabled="isChatSending || !selectedDO" 
+                        class="shrink-0 bg-white hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-300 text-indigo-700 px-2.5 py-1 rounded-lg text-[11px] font-medium transition cursor-pointer disabled:opacity-50 flex items-center gap-1 shadow-2xs"
+                    >
+                        <span>⚠️</span>
+                        <span>สรุป Error ทุก Step ของ DO นี้</span>
+                    </button>
+                    <button 
+                        @click="sendQuickPrompt('ตรวจสอบยอด QTY ระหว่าง WMS Plan และ Hitachi Pack ว่าตรงกันหรือไม่ และเกิดจากอะไร')" 
+                        :disabled="isChatSending || !selectedDO" 
+                        class="shrink-0 bg-white hover:bg-amber-50 border border-amber-200 hover:border-amber-300 text-amber-800 px-2.5 py-1 rounded-lg text-[11px] font-medium transition cursor-pointer disabled:opacity-50 flex items-center gap-1 shadow-2xs"
+                    >
+                        <span>📦</span>
+                        <span>เช็คยอด QTY Match / Mismatch</span>
+                    </button>
+                    <button 
+                        @click="sendQuickPrompt('ขอคำสั่ง SQL Script สำหรับแก้ปัญหาข้อมูลของ DO นี้อย่างละเอียด')" 
+                        :disabled="isChatSending || !selectedDO" 
+                        class="shrink-0 bg-white hover:bg-emerald-50 border border-emerald-200 hover:border-emerald-300 text-emerald-800 px-2.5 py-1 rounded-lg text-[11px] font-medium transition cursor-pointer disabled:opacity-50 flex items-center gap-1 shadow-2xs"
+                    >
+                        <span>🛠️</span>
+                        <span>ขอคำสั่ง SQL Fix Script</span>
+                    </button>
+                </div>
+
+                <!-- Chat Messages Scroll Container -->
+                <div 
+                    ref="chatMessagesContainer"
+                    class="bg-slate-50/80 rounded-xl border border-slate-200 p-4 space-y-4 max-h-[380px] min-h-[180px] overflow-y-auto font-sans custom-scrollbar"
+                >
+                    <!-- Initial Welcome Message if empty -->
+                    <div v-if="chatMessages.length === 0" class="text-center py-6 px-4 space-y-2 bg-white rounded-xl border border-slate-200/80 shadow-2xs max-w-lg mx-auto">
+                        <div class="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-rose-50 to-indigo-50 border border-rose-200 flex items-center justify-center text-2xl">
+                            🤖
+                        </div>
+                        <h4 class="text-sm font-bold text-slate-800">ยินดีต้อนรับสู่ Belton AI (Open Claw) Assistant</h4>
+                        <p class="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                            คุณสามารถพิมพ์ถามคำถามเพื่อวิเคราะห์ปัญหา DO, สอบถามโครงสร้าง SQL, ตรวจสอบจุดที่ข้อมูลไม่ครบ, หรือกดเลือกคำถามด่วนด้านบนได้ทันที
+                        </p>
+                        <div v-if="!openClawCookie" class="mt-3">
+                            <button 
+                                @click="showOpenClawConfigModal = true" 
+                                class="text-xs bg-rose-600 hover:bg-rose-500 text-white px-3.5 py-1.5 rounded-lg font-semibold inline-flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                            >
+                                <span>⚙️</span>
+                                <span>กรอก Cookie _openclaw_auth ก่อนเริ่มใช้งาน</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Message List -->
+                    <div 
+                        v-for="(msg, idx) in chatMessages" 
+                        :key="idx"
+                        :class="['flex gap-2 items-start', msg.role === 'user' ? 'justify-end' : 'justify-start']"
+                    >
+                        <!-- Assistant Avatar -->
+                        <div v-if="msg.role === 'assistant'" class="w-6 h-6 rounded-lg bg-gradient-to-tr from-rose-500 to-indigo-600 flex items-center justify-center text-[11px] shrink-0 mt-0.5 shadow-2xs text-white">
+                            🤖
+                        </div>
+
+                        <!-- Message Bubble -->
+                        <div 
+                            :class="[
+                                'text-xs leading-relaxed',
+                                msg.role === 'user' 
+                                    ? 'w-fit max-w-[80%] bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl rounded-tr-xs px-3.5 py-2 shadow-xs' 
+                                    : 'max-w-[85%] bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-xs px-4 py-3 shadow-xs'
+                            ]"
+                        >
+                            <!-- Header for Assistant -->
+                            <div v-if="msg.role === 'assistant'" class="flex items-center justify-between gap-2 pb-1.5 mb-2 border-b border-slate-100 text-[10px] text-slate-400">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-bold text-rose-600">Belton AI</span>
+                                    <span v-if="msg.durationMs" class="font-mono text-slate-400">({{ msg.durationMs }}ms)</span>
+                                </div>
+                                <button 
+                                    @click="copyText(msg.content)" 
+                                    class="text-[10px] text-slate-500 hover:text-slate-800 px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 border border-slate-200 transition cursor-pointer flex items-center gap-1"
+                                    title="คัดลอกข้อความทั้งหมด"
+                                >
+                                    <span>📋 คัดลอก</span>
+                                </button>
+                            </div>
+
+                            <!-- Content -->
+                            <div 
+                                v-if="msg.role === 'assistant'" 
+                                class="prose max-w-none text-xs leading-relaxed overflow-x-auto text-slate-800" 
+                                v-html="formatMarkdown(msg.content)"
+                            ></div>
+                            <div v-else>
+                                <!-- Attached User Images in bubble -->
+                                <div v-if="msg.images && msg.images.length > 0" class="flex flex-wrap gap-1.5 mb-1.5">
+                                    <img 
+                                        v-for="(imgUrl, iIdx) in msg.images" 
+                                        :key="iIdx" 
+                                        :src="imgUrl" 
+                                        class="max-w-[200px] max-h-[130px] rounded-lg border border-white/20 object-cover cursor-pointer hover:opacity-90 shadow-2xs transition"
+                                        @click="previewModalImage = imgUrl"
+                                        title="คลิกเพื่อดูรูปขนาดเต็ม"
+                                        alt="User screenshot"
+                                    />
+                                </div>
+                                <div class="whitespace-pre-wrap font-sans text-white leading-normal">
+                                    {{ msg.content }}
+                                </div>
+                            </div>
+
+                            <!-- Timestamp -->
+                            <div :class="['text-[9px] mt-0.5 font-mono', msg.role === 'user' ? 'text-indigo-200 text-right opacity-80' : 'text-slate-400 text-left mt-1.5']">
+                                {{ formatTime(msg.timestamp) }}
+                            </div>
+                        </div>
+
+                        <!-- User Avatar -->
+                        <div v-if="msg.role === 'user'" class="w-6 h-6 rounded-lg bg-indigo-500 flex items-center justify-center text-[11px] font-bold text-white shrink-0 mt-0.5 shadow-2xs">
+                            👤
+                        </div>
+                    </div>
+
+                    <!-- Typing / Loading Indicator -->
+                    <div v-if="isChatSending" class="flex gap-3 justify-start items-center text-xs text-slate-600">
+                        <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-rose-500 to-indigo-600 flex items-center justify-center text-xs shrink-0 animate-pulse text-white">
+                            🤖
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-xs px-4 py-2.5 flex items-center gap-3 shadow-xs">
+                            <span class="animate-spin w-3.5 h-3.5 border-2 border-rose-500 border-t-transparent rounded-full"></span>
+                            <span class="text-slate-700 font-medium">Belton AI กำลังคิดวิเคราะห์และประมวลผลข้อมูล...</span>
+                            <button 
+                                @click="stopChatMessage" 
+                                class="ml-1 text-[11px] bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                                title="หยุดการประมวลผลทันที"
+                            >
+                                <span>⏹️ หยุด</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Input Bar (Supports Ctrl+V Image Paste) -->
+                <div class="bg-slate-50 rounded-xl border border-slate-200 p-3 space-y-2">
+                    <div class="flex items-center justify-between text-[11px] text-slate-500 px-0.5">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="flex items-center gap-1 text-slate-600 font-semibold">
+                                📌 อ้างอิง:
+                            </span>
+                            <span class="font-mono text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 font-semibold">
+                                {{ selectedDO ? 'DO: ' + selectedDO.do : 'ยังไม่ได้เลือก DO' }}
+                            </span>
+                            <span v-if="activeStep" class="font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 font-semibold">
+                                Step {{ activeStep.stepNum }} ({{ activeStep.sublabel || activeStep.tableName }})
+                            </span>
+                            <span :class="['font-mono text-xs px-2 py-0.5 rounded border font-bold', ((activeStep && activeStep.env) ? activeStep.env : globalEnv) === 'development' ? 'bg-amber-50 text-amber-700 border-amber-300' : 'bg-emerald-50 text-emerald-700 border-emerald-300']">
+                                🔌 {{ ((activeStep && activeStep.env) ? activeStep.env : globalEnv) === 'development' ? 'Dev (BITINTRADEV)' : 'Prod (BITINTRA_REAL)' }}
+                            </span>
+
+                            <!-- Attach Image Button -->
+                            <button 
+                                @click="$refs.chatImageInput.click()" 
+                                type="button" 
+                                class="text-[11px] text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-lg border border-indigo-200 transition cursor-pointer flex items-center gap-1 font-semibold ml-1 shadow-2xs"
+                                title="คลิกเพื่อเลือกไฟล์รูปภาพ หรือกด Ctrl+V เพื่อวางรูปภาพในช่องพิมพ์"
+                            >
+                                <span>🖼️ แนบรูปภาพ</span>
+                                <span class="text-[9px] text-indigo-400 font-mono hidden sm:inline">(Ctrl+V)</span>
+                            </button>
+                            <input 
+                                type="file" 
+                                ref="chatImageInput" 
+                                accept="image/*" 
+                                multiple 
+                                class="hidden" 
+                                @change="handleFileSelect"
+                            />
+                        </div>
+                        <span class="text-[10px] text-slate-400 hidden sm:inline">กด Enter เพื่อส่ง, Shift+Enter ขึ้นบรรทัดใหม่, Ctrl+V วางรูป</span>
+                    </div>
+
+                    <!-- Attached Images Preview Strip -->
+                    <div v-if="chatAttachedImages.length > 0" class="flex flex-wrap items-center gap-2 p-2 bg-indigo-50/60 rounded-xl border border-indigo-100">
+                        <div class="text-[11px] text-indigo-700 font-bold flex items-center gap-1 mr-1">
+                            <span>📷 รูปภาพที่แนบ ({{ chatAttachedImages.length }}):</span>
+                        </div>
+                        <div 
+                            v-for="(img, idx) in chatAttachedImages" 
+                            :key="img.id" 
+                            class="relative group rounded-lg overflow-hidden border border-indigo-300 bg-white shadow-xs"
+                        >
+                            <!-- OCR status badge top-left -->
+                            <div class="absolute top-0.5 left-0.5 z-10 pointer-events-none">
+                                <span v-if="img.ocrStatus === 'processing'" class="bg-amber-600/90 text-white text-[7.5px] font-bold px-1 py-0.2 rounded shadow-2xs flex items-center gap-0.5">
+                                    <span class="animate-spin text-[6px]">⏳</span> OCR...
+                                </span>
+                                <span v-else-if="img.ocrStatus === 'done'" class="bg-emerald-600/90 text-white text-[7.5px] font-bold px-1 py-0.2 rounded shadow-2xs flex items-center gap-0.5" :title="img.ocrText">
+                                    ✓ OCR แล้ว
+                                </span>
+                            </div>
+                            <img :src="img.dataUrl" class="h-14 w-20 object-cover cursor-pointer" @click="previewModalImage = img.dataUrl" :alt="img.name" />
+                            <div class="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-1">
+                                <button 
+                                    @click.stop="removeAttachedImage(idx)" 
+                                    type="button" 
+                                    class="w-5 h-5 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center text-[10px] shadow cursor-pointer"
+                                    title="ลบรูปนี้ออก"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            <span class="absolute bottom-0 inset-x-0 bg-slate-900/75 text-white text-[8px] font-mono px-0.5 truncate text-center block">
+                                {{ img.size }}
+                            </span>
+                        </div>
+                        <button 
+                            @click="chatAttachedImages = []" 
+                            type="button" 
+                            class="text-[10px] text-rose-500 hover:text-rose-700 px-2 py-1 rounded hover:bg-rose-50 transition cursor-pointer font-semibold ml-auto"
+                        >
+                            ล้างรูปทั้งหมด
+                        </button>
+                    </div>
+
+                    <div class="flex items-end gap-2">
+                        <textarea 
+                            v-model="chatInputText"
+                            @paste="handleChatPaste"
+                            @keydown.enter.exact.prevent="sendChatMessage"
+                            rows="2"
+                            placeholder="พิมพ์คำถามเพื่อคุยกับ AI เกี่ยวกับ DO นี้ หรือกด Ctrl+V เพื่อวางรูปภาพ / Screenshot..."
+                            class="w-full bg-white text-slate-800 placeholder-slate-400 text-xs rounded-xl p-2.5 border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-rose-400/50 focus:border-rose-400 resize-none font-sans leading-relaxed shadow-2xs"
+                            :disabled="isChatSending"
+                        ></textarea>
+                        
+                        <!-- Dynamic Send / Stop Button -->
+                        <button 
+                            v-if="isChatSending"
+                            @click="stopChatMessage"
+                            class="h-[54px] px-5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 text-xs animate-pulse"
+                            title="หยุดการทำงาน AI ทันที"
+                        >
+                            <span>⏹️</span>
+                            <span>หยุด</span>
+                        </button>
+                        <button 
+                            v-else
+                            @click="sendChatMessage"
+                            :disabled="!chatInputText.trim() && chatAttachedImages.length === 0"
+                            class="h-[54px] px-5 bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0 text-xs"
+                        >
+                            <span>ส่ง 🚀</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Fullscreen Image Preview Modal -->
+                <div 
+                    v-if="previewModalImage" 
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-xs p-4 transition-all" 
+                    @click="previewModalImage = null"
+                >
+                    <div class="relative max-w-4xl max-h-[90vh] bg-white rounded-2xl p-2 shadow-2xl overflow-hidden border border-slate-700/50" @click.stop>
+                        <button 
+                            @click="previewModalImage = null" 
+                            class="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-900 text-white flex items-center justify-center text-sm transition cursor-pointer z-10 shadow"
+                        >
+                            ✕
+                        </button>
+                        <img :src="previewModalImage" class="max-w-full max-h-[85vh] rounded-xl object-contain mx-auto block" alt="Enlarged screenshot" />
+                    </div>
+                </div>
+
+            </div>
         </div>
 
         <!-- Bottom Section: Metric Summary Cards & CSV Generator Preview -->
@@ -795,7 +1254,7 @@
                             <span v-else class="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200 font-mono">{{ cloneTotalPreviewRows }} แถว</span>
                         </div>
                         <div v-if="cloneFinished" class="text-emerald-600 font-bold flex items-center gap-1">
-                            <span>✓</span> Clone สำเร็จครบทั้ง 11 ตารางแล้ว
+                            <span>✓</span> Clone สำเร็จครบทั้ง 12 ตารางแล้ว
                         </div>
                     </div>
 
@@ -1066,11 +1525,96 @@
                 <div class="px-6 py-3.5 bg-white border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shrink-0">
                     <span class="text-xs text-slate-500">💡 เมื่อแก้ไขข้อมูลในฐานข้อมูลตามคำแนะนำเรียบร้อย ให้กดปุ่ม <b>"วิเคราะห์ Flow"</b> หรือ <b>"รันเฉพาะขั้นนี้"</b> เพื่อทดสอบอีกครั้ง</span>
                     <button 
-                        @click="showAllTroubleshootingModal = false"
+                        @click="showAllTroubleshootingModal = false" 
                         class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 transition shadow-sm"
                     >
                         ปิดหน้าต่าง
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Open Claw AI Configuration Modal -->
+        <div v-if="showOpenClawConfigModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+            <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl flex flex-col overflow-hidden">
+                <div class="px-6 py-4 bg-gradient-to-r from-slate-900 via-rose-950 to-slate-900 text-white flex items-center justify-between border-b border-rose-900/50">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-lg bg-rose-600/30 border border-rose-400/40 flex items-center justify-center text-lg">🤖</span>
+                        <div>
+                            <h3 class="text-sm font-bold text-white">ตั้งค่าการเชื่อมต่อ Belton AI (Open Claw)</h3>
+                            <p class="text-[11px] text-rose-200">ระบุ Cookie _openclaw_auth เพื่อใช้บริการ AI วินิจฉัยข้อผิดพลาด</p>
+                        </div>
+                    </div>
+                    <button @click="showOpenClawConfigModal = false" class="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center text-xs transition cursor-pointer">
+                        ✕
+                    </button>
+                </div>
+
+                <div class="p-6 space-y-4 text-xs text-slate-700">
+                    <!-- Open Claw URL -->
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">
+                            Open Claw Endpoint URL:
+                        </label>
+                        <input 
+                            type="text" 
+                            v-model="openClawUrl" 
+                            placeholder="https://openclaw-th.beltontechnology.com"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-xs focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none"
+                        >
+                    </div>
+
+                    <!-- Cookie input -->
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1 flex items-center justify-between">
+                            <span>Cookie <code class="text-rose-600 bg-rose-50 px-1 rounded font-mono">_openclaw_auth</code>:</span>
+                            <span class="text-[10px] text-slate-400">ดึงจาก DevTools (F12) -> Application -> Cookies</span>
+                        </label>
+                        <textarea 
+                            v-model="openClawCookie" 
+                            rows="3" 
+                            placeholder="วางค่า Cookie เช่น _openclaw_auth=eyJhbGciOiJIUzI1NiIsIn..."
+                            class="w-full p-3 border border-slate-300 rounded-xl font-mono text-[11px] focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none custom-scrollbar"
+                        ></textarea>
+                        <p class="text-[10.5px] text-slate-400 mt-1">
+                            💡 ค่า Cookie นี้จะถูกจัดเก็บในเครื่องของคุณ (LocalStorage) เพื่อความปลอดภัยและสะดวกในการใช้งาน
+                        </p>
+                    </div>
+
+                    <!-- Connection Test Result -->
+                    <div v-if="openClawTestResult" :class="['p-3 rounded-xl border text-xs leading-relaxed', openClawTestResult.success ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200']">
+                        <div class="flex items-center gap-2 font-bold">
+                            <span>{{ openClawTestResult.success ? '✅' : '❌' }}</span>
+                            <span>{{ openClawTestResult.message }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
+                    <button 
+                        @click="testOpenClawConnection" 
+                        :disabled="openClawTesting || !openClawCookie"
+                        class="px-4 py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-300 transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                    >
+                        <span v-if="openClawTesting" class="animate-spin w-3 h-3 border-2 border-rose-600 border-t-transparent rounded-full"></span>
+                        <span v-else>🧪</span>
+                        <span>{{ openClawTesting ? 'กำลังทดสอบ...' : 'ทดสอบเชื่อมต่อ (Ping Test)' }}</span>
+                    </button>
+
+                    <div class="flex items-center gap-2">
+                        <button 
+                            @click="showOpenClawConfigModal = false"
+                            class="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-200 transition cursor-pointer"
+                        >
+                            ยกเลิก
+                        </button>
+                        <button 
+                            @click="saveOpenClawConfig(); showOpenClawConfigModal = false;"
+                            class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 transition shadow-sm cursor-pointer"
+                        >
+                            บันทึกการตั้งค่า
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1095,6 +1639,24 @@
                 selectedDO: null,
                 selectedNodeId: '1',
                 diagnosticsResult: null,
+
+                // Open Claw AI Integration & Interactive Chat State
+                openClawCookie: localStorage.getItem('openclaw_auth_cookie') || '',
+                openClawUrl: localStorage.getItem('openclaw_base_url') || 'https://openclaw-th.beltontechnology.com',
+                showOpenClawConfigModal: false,
+                loadingOpenClaw: false,
+                openClawTargetStep: null,
+                openClawResults: {},
+                openClawTesting: false,
+                openClawTestResult: null,
+                chatMessages: [],
+                chatInputText: '',
+                chatAttachedImages: [],
+                previewModalImage: null,
+                isChatSending: false,
+                isAIChatCollapsed: false,
+                chatCancelSource: null,
+                chatAbortController: null,
                 
                 // Flowchart Initial Nodes Specification for Vue2-flow
                 flowNodes: [
@@ -1340,7 +1902,8 @@
                     { id: 'c8', name: '8. HIT_SHIP_CONFIRM', table: 'WMS.HIT_SHIP_CONFIRM', db: 'BITINTRA ➔ DEV', icon: '🚚', x: 840, y: 30, width: 230, height: 95, status: 'idle', count: 0 },
                     { id: 'c9', name: '9. HIT_PALLET_DATA', table: 'WMS.HIT_PALLET_DATA', db: 'BITINTRA ➔ DEV', icon: '🏷️', x: 840, y: 155, width: 230, height: 95, status: 'idle', count: 0 },
                     { id: 'c10', name: '10. HITACHI PROD_DATA', table: 'HITACHI.PROD_DATA', db: 'SGFCDB02 ➔ DEV', icon: '⚙️', x: 840, y: 280, width: 230, height: 95, status: 'idle', count: 0 },
-                    { id: 'c11', name: '11. HITACHI PACK_HEADER', table: 'HITACHI.PACK_HEADER', db: 'SGFCDB02 ➔ DEV', icon: '📦', x: 840, y: 405, width: 230, height: 95, status: 'idle', count: 0, isCustom: true }
+                    { id: 'c11', name: '11. HITACHI PACK_HEADER', table: 'HITACHI.PACK_HEADER', db: 'SGFCDB02 ➔ DEV', icon: '📦', x: 840, y: 405, width: 230, height: 95, status: 'idle', count: 0 },
+                    { id: 'c12', name: '12. HIT_TRANSFER_DATA_LOG_FTP', table: 'WMS.HIT_TRANSFER_DATA_LOG_FTP', db: 'BITINTRA ➔ DEV', icon: '📜', x: 30, y: 280, width: 230, height: 95, status: 'idle', count: 0 }
                 ],
                 cloneFlowConns: [
                     { id: 'cc1', source: 'c1', target: 'c3', status: 'default', animated: false },
@@ -1352,7 +1915,8 @@
                     { id: 'cc7', source: 'c6', target: 'c8', status: 'default', animated: false },
                     { id: 'cc8', source: 'c8', target: 'c9', status: 'default', animated: false },
                     { id: 'cc9', source: 'c6', target: 'c10', status: 'default', animated: false },
-                    { id: 'cc10', source: 'c10', target: 'c11', status: 'default', animated: false }
+                    { id: 'cc10', source: 'c10', target: 'c11', status: 'default', animated: false },
+                    { id: 'cc11', source: 'c1', target: 'c12', status: 'default', animated: false }
                 ],
                 selectedCloneNode: null,
                 clonePreviewRows: {},
@@ -1533,6 +2097,7 @@
                 const today = new Date().toISOString().slice(0, 10);
                 this.selectedDate = today;
                 this.fetchDOs();
+                this.loadChatHistory();
             },
 
             methods: {
@@ -2293,12 +2858,703 @@
                     return this.troubleshootingGuide[Number(stepNum)] || null;
                 },
 
+                getDynamicStepAnalysis(step) {
+                    if (!step || !step.stepNum) {
+                        return {
+                            table: '-',
+                            db: '-',
+                            risk: '-',
+                            detectedCause: 'ไม่พบข้อมูลข้อผิดพลาดในขั้นตอนนี้',
+                            fixSteps: [],
+                            owner: '-',
+                            suggestedSql: ''
+                        };
+                    }
+
+                    const stepNum = Number(step.stepNum);
+                    const base = this.troubleshootingGuide[stepNum] || {
+                        title: `Step ${stepNum}`,
+                        db: step.database || 'BITINTRA_REAL (WMS)',
+                        table: step.name || '-',
+                        risk: 'ระบบหยุดทำงานหรือข้ามขั้นตอนการส่งมอบนี้ไป',
+                        causes: ['ข้อมูลไม่ตรงตามเงื่อนไขทางธุรกิจ'],
+                        fixSteps: ['ตรวจสอบข้อมูลในฐานข้อมูลที่เกี่ยวข้อง'],
+                        owner: 'ทีมงานผู้ดูแลระบบ'
+                    };
+
+                    const doNo = this.selectedDO ? this.selectedDO.do : 'DO_NUMBER';
+                    const prefix = doNo ? doNo.substring(0, 4) : '';
+                    const diag = this.diagnosticsResult || {};
+                    const audit = diag.audit || {};
+                    const msg = step.message || '';
+                    const data = step.data;
+
+                    if (step.status === 'idle') {
+                        return {
+                            stepNum,
+                            title: base.title,
+                            db: base.db,
+                            table: base.table,
+                            risk: 'ยังไม่ได้ทำการรันวิเคราะห์ข้อมูลของขั้นตอนนี้',
+                            detectedCause: 'ขั้นตอนนี้ยังไม่ได้กดทดสอบเพื่อดึงข้อมูลจริงจาก Database (สถานะ: Idle / รอการทดสอบ)',
+                            fixSteps: [
+                                'กดปุ่ม "⚡ วิเคราะห์ Flow (DO นี้)" ด้านบน หรือกด "รันเฉพาะขั้นตอนนี้" เพื่อดึงข้อมูลจริงมาวิเคราะห์'
+                            ],
+                            owner: base.owner,
+                            suggestedSql: base.suggestedSql || `SELECT * FROM ${base.table} WHERE do = '${doNo}';`
+                        };
+                    }
+
+                    let detectedCause = msg || (base.causes && base.causes[0]) || 'ตรวจพบความผิดปกติในขั้นตอนนี้';
+                    let fixSteps = [...(base.fixSteps || [])];
+                    let suggestedSql = '';
+
+                    switch (stepNum) {
+                        case 1:
+                            if (audit.isSentBefore) {
+                                detectedCause = `ตรวจพบว่า DO '${doNo}' เคยส่งไฟล์ SFTP สำเร็จไปแล้วเมื่อ ${audit.sentDate ? this.formatDateTime(audit.sentDate) : 'รอบก่อนหน้า'} (มีประวัติบันทึกในตาราง WMS.HIT_TRANSFER_DATA_LOG_FTP) สคริปต์จึงกรอง DO นี้ออกอัตโนมัติเพื่อป้องกันการส่งไฟล์ซ้ำ`;
+                                fixSteps = [
+                                    `ตรวจสอบว่ารายการนี้ต้องการส่งซ้ำจริงหรือไม่ หากส่งสำเร็จแล้วถือว่าสมบูรณ์ ไม่จำเป็นต้องส่งซ้ำ`,
+                                    `หากต้องการทดสอบรันใหม่อีกครั้ง ให้ลบประวัติ DO ออกจากตาราง WMS.HIT_TRANSFER_DATA_LOG_FTP ชั่วคราว`,
+                                    `ตรวจสอบว่าวันที่ Ship Date ในระบบตรงกับรอบการประมวลผลหรือไม่`
+                                ];
+                                suggestedSql = `DELETE FROM WMS.HIT_TRANSFER_DATA_LOG_FTP WHERE do_no = '${doNo}';`;
+                            } else if (!data || (Array.isArray(data) && data.length === 0)) {
+                                detectedCause = `ไม่พบรายการ DO '${doNo}' ที่มีสถานะ 'type = PACK' ในตาราง WMS.HIT_SHIP_CONFIRM หรือยังไม่ได้รับการยืนยันในตาราง WMS.lrv_wms_check_confirm_log`;
+                                fixSteps = [
+                                    `ตรวจสอบกับทีมคลังสินค้า (WMS) ว่าได้ทำการยิงยืนยันการแพ็คสินค้าเสร็จสมบูรณ์หรือยัง (ฟิลด์ type ต้องเป็น 'PACK')`,
+                                    `ตรวจสอบว่ามีการบันทึกยืนยันในตาราง lrv_wms_check_confirm_log สำหรับ plan_id ของ DO นี้แล้วหรือยัง`,
+                                    `ตรวจสอบว่าวันที่ (date) ในตารางตรงกับวันที่ที่เลือกค้นหาหรือไม่`
+                                ];
+                                suggestedSql = `SELECT * FROM WMS.HIT_SHIP_CONFIRM WHERE do = '${doNo}';`;
+                            }
+                            break;
+
+                        case 2:
+                            if (data && data.type === 'PRB') {
+                                detectedCause = `Prefix '${prefix}' ถูกระบุเป็นประเภท PRB ซึ่งในระบบ FCA ฟังก์ชันการส่ง SFTP ไปยัง PRB ถูกระงับการทำงานไว้ในสคริปต์ (ระบบจะส่งเฉพาะปลายทาง BPI Direct)`;
+                                fixSteps = [
+                                    `ตรวจสอบกับทีมงานว่า DO นี้เป็นของปลายทาง PRB จริงหรือไม่ หากใช่ ระบบจะข้ามการส่ง SFTP ตาม Business Rule ของ FCA`,
+                                    `หากต้องการให้ส่งข้อมูล กรุณาตรวจสอบ Master ใน WMS.HIT_SHIP_TO_MASTER ว่าต้องเปลี่ยนประเภทเป็น BPI หรือไม่`
+                                ];
+                                suggestedSql = `SELECT * FROM WMS.HIT_SHIP_TO_MASTER WHERE prefix = '${prefix}';`;
+                            } else if (!data || data.status === 'missing' || (Array.isArray(data) && data.length === 0)) {
+                                detectedCause = `ไม่พบการตั้งค่า Prefix 4 ตัวแรก '${prefix}' ในตาราง WMS.HIT_SHIP_TO_MASTER หรือสถานะฟิลด์ status ไม่เป็น 'active'`;
+                                fixSteps = [
+                                    `เพิ่มข้อมูล Prefix '${prefix}' ในตาราง WMS.HIT_SHIP_TO_MASTER และระบุ ship_to / type ให้ถูกต้อง`,
+                                    `กำหนดฟิลด์ status = 'active'`
+                                ];
+                                suggestedSql = `INSERT INTO WMS.HIT_SHIP_TO_MASTER (prefix, ship_to, type, status) VALUES ('${prefix}', 'BPI', 'BPI', 'active');`;
+                            }
+                            break;
+
+                        case 3:
+                            if (!data || (Array.isArray(data) && data.length === 0)) {
+                                detectedCause = `ไม่พบข้อมูลการจับคู่ DO '${doNo}' กับ Plan ID ใน WMS.SHIPMENTDO_DATA หรือไม่มีรายการกล่องใน WMS.SHIPMENTPALLET_BOX_PROD_HTC`;
+                                fixSteps = [
+                                    `ตรวจสอบในระบบ WMS ว่า DO '${doNo}' ได้ถูกผูก Plan ID และสร้างรายการ Pallet/Box ในระบบเรียบร้อยหรือยัง`,
+                                    `ตรวจสอบตาราง WMS.SHIPMENTPALLET_BOX_PROD_HTC ว่ามีรายการ prod_lot และ store_lot ครบถ้วนหรือไม่`
+                                ];
+                                suggestedSql = `SELECT * FROM WMS.SHIPMENTDO_DATA WHERE do_no = '${doNo}';`;
+                            }
+                            break;
+
+                        case 4:
+                            if (!data || (Array.isArray(data) && data.length === 0)) {
+                                detectedCause = `ไม่พบหมายเลขพาเลท (running_pallet) ที่มีสถานะ 'Active' หรือข้อมูล box_ship_name/ship_date เป็นค่าว่างในตาราง WMS.HIT_PALLET_DATA`;
+                                fixSteps = [
+                                    `ตรวจสอบข้อมูลในตาราง WMS.HIT_PALLET_DATA ว่ามีรายการพาเลทตรงกับ prod_lot ของ DO '${doNo}' หรือไม่`,
+                                    `ตรวจสอบว่าฟิลด์ status ในตาราง HIT_PALLET_DATA เป็น 'Active' (ตัวพิมพ์ใหญ่)`
+                                ];
+                                suggestedSql = `SELECT * FROM WMS.HIT_PALLET_DATA WHERE prod_lot IN (SELECT prod_lot FROM WMS.SHIPMENTPALLET_BOX_PROD_HTC WHERE plan_id IN (SELECT plan_id FROM WMS.SHIPMENTDO_DATA WHERE do_no = '${doNo}'));`;
+                            }
+                            break;
+
+                        case 5:
+                            if (!data || (Array.isArray(data) && data.length === 0)) {
+                                detectedCause = `ไม่พบรายการ Lot การผลิตในฐานข้อมูลฝ่ายผลิต HITACHI.PROD_DATA (บน Server SGFCDB02) ตรงกับ prod_lot ใน WMS`;
+                                fixSteps = [
+                                    `ตรวจสอบว่าฝ่ายผลิต Hitachi ได้ทำการบันทึกข้อมูลและ Sync เข้าระบบ SGFCDB02 เรียบร้อยแล้วหรือยัง`,
+                                    `ตรวจสอบการสะกดของ prod_lot ใน WMS ว่าตรงกับหมายเลขในตาราง HITACHI.PROD_DATA หรือไม่`
+                                ];
+                                suggestedSql = `SELECT * FROM HITACHI.PROD_DATA WHERE prod_lot IN (SELECT prod_lot FROM WMS.SHIPMENTPALLET_BOX_PROD_HTC WHERE plan_id IN (SELECT plan_id FROM WMS.SHIPMENTDO_DATA WHERE do_no = '${doNo}'));`;
+                            }
+                            break;
+
+                        case 6:
+                            if (!data || (Array.isArray(data) && data.length === 0)) {
+                                detectedCause = `ไม่พบข้อมูล Pack ID ในตาราง HITACHI.PACK_HEADER (บน Server SGFCDB02) สำหรับ prod_lot ดังกล่าว`;
+                                fixSteps = [
+                                    `ตรวจสอบกับหัวหน้างานแพ็ค Hitachi ว่าขั้นตอนการยิง Pack ID เสร็จสมบูรณ์แล้วหรือไม่`,
+                                    `ตรวจสอบว่า pack_id และ prod_lot มีการเชื่อมโยงถูกต้องในระบบ SGFCDB02`
+                                ];
+                                suggestedSql = `SELECT * FROM HITACHI.PACK_HEADER WHERE prod_lot = '...';`;
+                            }
+                            break;
+
+                        case 7:
+                            detectedCause = msg || `ไม่พบข้อมูล Build Name / Remark ในตาราง WMS.HIT_FGREC_DATA สำหรับ DO '${doNo}'`;
+                            fixSteps = [
+                                `ตรวจสอบตาราง WMS.HIT_FGREC_DATA ว่ามีบันทึกค่า remark สำหรับ customer_pn ของ DO นี้หรือไม่`,
+                                `หากไม่มี ให้ประสานงานทีม WMS หรือ Master Data ทำการเพิ่มข้อมูล remark ให้ตรงตามสเปก`
+                            ];
+                            suggestedSql = `SELECT customer_pn, remark FROM WMS.HIT_FGREC_DATA WHERE customer_pn = '...';`;
+                            break;
+
+                        case 8:
+                            detectedCause = msg || `ไม่สามารถค้นหา Model Name ในระบบ Oracle หรือ WMS Master สำหรับ Part Number นี้ได้`;
+                            fixSteps = [
+                                `ตรวจสอบในระบบ Master Oracle ว่า Part Number นี้มี Model Name ผูกไว้หรือไม่`,
+                                `ตรวจสอบการตั้งค่า Mapping Customer PN ในระบบ WMS`
+                            ];
+                            break;
+
+                        case 9:
+                            if (audit && audit.totalConfirmQty !== audit.totalHitachiQty) {
+                                const diff = Math.abs((audit.totalConfirmQty || 0) - (audit.totalHitachiQty || 0));
+                                detectedCause = `ตรวจพบยอดจำนวนชิ้นงานไม่ตรงกัน: ยอด WMS Plan QTY = ${this.formatNumber(audit.totalConfirmQty)} ชิ้น แต่ยอด Hitachi Scanned Pack QTY = ${this.formatNumber(audit.totalHitachiQty)} ชิ้น (ผลต่างต่างกัน ${this.formatNumber(diff)} ชิ้น)`;
+                                fixSteps = [
+                                    `ตรวจสอบว่า WMS มีการคีย์จำนวนเกิน หรือทางฝ่ายผลิต Hitachi สแกน Pack ID ไม่ครบตามยอด`,
+                                    `ทำการตรวจสอบและปรับยอดจำนวนชิ้นงานระหว่าง 2 ระบบให้ตรงกันก่อนทำการส่งไฟล์ CSV SFTP`
+                                ];
+                            } else {
+                                detectedCause = msg || `ไม่สามารถสร้างและตรวจสอบความถูกต้องของไฟล์ CSV 25 คอลัมน์ได้`;
+                            }
+                            break;
+
+                        case 10:
+                            detectedCause = msg || `ไม่พบข้อมูลการตั้งค่า SFTP ในตาราง WMS.HIT_FTP_CONFIG หรือไม่สามารถเชื่อมต่อไปยังเซิร์ฟเวอร์ SFTP ลูกค้าได้`;
+                            fixSteps = [
+                                `ตรวจสอบการตั้งค่าในตาราง WMS.HIT_FTP_CONFIG ว่ามี host, user, remote_path ถูกต้อง`,
+                                `ตรวจสอบไฟล์ SSH Private Key (Belton.ppk) ว่ามีอยู่จริงและสิทธิ์ถูกต้อง`,
+                                `ตรวจสอบการเปิด Port Firewall ภายในองค์กรไปยัง sftp2.wdc.com`
+                            ];
+                            suggestedSql = `SELECT * FROM WMS.HIT_FTP_CONFIG WHERE type = 'FCA';`;
+                            break;
+                    }
+
+                    return {
+                        table: base.table,
+                        db: base.db,
+                        risk: base.risk,
+                        detectedCause: detectedCause,
+                        fixSteps: fixSteps,
+                        owner: base.owner,
+                        suggestedSql: suggestedSql
+                    };
+                },
+
                 selectStepFromModal(stepNum) {
                     this.showAllTroubleshootingModal = false;
                     const targetNode = this.flowNodes.find(n => n.stepNum === Number(stepNum));
                     if (targetNode) {
                         this.selectedNodeId = String(targetNode.id || targetNode.stepNum);
                     }
+                },
+
+                saveOpenClawConfig() {
+                    localStorage.setItem('openclaw_auth_cookie', this.openClawCookie || '');
+                    localStorage.setItem('openclaw_base_url', this.openClawUrl || 'https://openclaw-th.beltontechnology.com');
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: 'บันทึกการตั้งค่า Open Claw แล้ว',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                },
+
+                async testOpenClawConnection() {
+                    if (!this.openClawCookie) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'กรุณาระบุ Cookie',
+                            text: 'กรุณากรอกหรือวางค่า Cookie _openclaw_auth ก่อนทำการทดสอบ',
+                            timer: 2500,
+                            showConfirmButton: false
+                        });
+                        return;
+                    }
+
+                    this.openClawTesting = true;
+                    this.openClawTestResult = null;
+                    try {
+                        const res = await axios.post('/api/openclaw/test-connection', {
+                            cookie: this.openClawCookie,
+                            endpointUrl: this.openClawUrl
+                        });
+                        this.openClawTestResult = {
+                            success: true,
+                            message: `เชื่อมต่อสำเร็จ (${res.data.durationMs}ms)`,
+                            data: res.data
+                        };
+                        this.saveOpenClawConfig();
+                    } catch (err) {
+                        console.error('Test Open Claw error:', err);
+                        this.openClawTestResult = {
+                            success: false,
+                            message: err.response?.data?.error || err.message,
+                            details: err.response?.data?.details
+                        };
+                    } finally {
+                        this.openClawTesting = false;
+                    }
+                },
+
+                async diagnoseWithOpenClaw(step) {
+                    if (!step) return;
+
+                    this.loadingOpenClaw = true;
+                    this.openClawTargetStep = step.stepNum;
+
+                    try {
+                        const doNo = this.selectedDO ? this.selectedDO.do : '';
+                        const dynamicAnalysis = this.getDynamicStepAnalysis(step);
+
+                        const res = await axios.post('/api/openclaw/diagnose', {
+                            stepNum: step.stepNum,
+                            stepName: step.name,
+                            doNumber: doNo,
+                            sql: step.sql,
+                            data: step.data,
+                            message: step.message,
+                            table: dynamicAnalysis.table || step.tableName,
+                            db: dynamicAnalysis.db || step.database,
+                            detectedCause: dynamicAnalysis.detectedCause,
+                            env: step.env || this.globalEnv,
+                            cookie: this.openClawCookie,
+                            endpointUrl: this.openClawUrl
+                        });
+
+                        if (res.data && res.data.status === 200) {
+                            const resultData = res.data.data;
+                            this.$set(this.openClawResults, step.stepNum, resultData);
+                            this.$forceUpdate();
+
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'success',
+                                title: `Belton AI วิเคราะห์ Step ${step.stepNum} เสร็จสิ้น (${resultData.durationMs}ms)`,
+                                showConfirmButton: false,
+                                timer: 2000
+                            });
+                        } else {
+                            throw new Error(res.data?.error || 'Failed to diagnose');
+                        }
+                    } catch (err) {
+                        console.error('Diagnose with Open Claw error:', err);
+                        const errorMsg = err.response?.data?.error || err.message;
+                        const hint = err.response?.data?.hint || '';
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Open Claw AI เกิดข้อผิดพลาด',
+                            html: `<div class="text-left text-xs space-y-2 font-sans">
+                                    <p class="font-bold text-rose-600">${errorMsg}</p>
+                                    ${hint ? `<p class="bg-amber-50 p-2 rounded text-amber-800 border border-amber-200">💡 <b>คำแนะนำ:</b> ${hint}</p>` : ''}
+                                   </div>`,
+                            showCancelButton: true,
+                            cancelButtonText: 'ปิด',
+                            confirmButtonText: 'ตั้งค่า Cookie ใหม่'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                this.showOpenClawConfigModal = true;
+                            }
+                        });
+                    } finally {
+                        this.loadingOpenClaw = false;
+                        this.openClawTargetStep = null;
+                    }
+                },
+
+                clearAIResult(stepNum) {
+                    this.$delete(this.openClawResults, stepNum);
+                    this.$forceUpdate();
+                },
+
+                formatMarkdown(text) {
+                    if (!text) return '';
+                    let html = text
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;');
+
+                    html = html.replace(/```([a-z]*)\n([\s\S]*?)```/gm, '<pre class="bg-slate-900 text-emerald-300 p-3.5 rounded-xl font-mono text-[11.5px] my-2.5 overflow-x-auto whitespace-pre-wrap border border-slate-800 select-all shadow-xs">$2</pre>');
+                    html = html.replace(/`([^`]+)`/g, '<code class="bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded font-mono text-[11px] border border-rose-200 font-semibold">$1</code>');
+                    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-slate-900 font-bold">$1</strong>');
+                    html = html.replace(/^### (.*$)/gim, '<h4 class="font-bold text-rose-700 text-xs mt-3 mb-1 flex items-center gap-1">$1</h4>');
+                    html = html.replace(/^## (.*$)/gim, '<h3 class="font-extrabold text-slate-900 text-sm mt-3.5 mb-1.5 border-b border-slate-200 pb-1">$1</h3>');
+                    html = html.replace(/^# (.*$)/gim, '<h2 class="font-extrabold text-slate-900 text-base mt-4 mb-2">$1</h2>');
+                    html = html.replace(/\n/g, '<br>');
+
+                    return html;
+                },
+
+                // =========================================================
+                // AI Interactive Chat Methods (with Image Attachment Support)
+                // =========================================================
+                compressImageFile(file, callback) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            let width = img.width;
+                            let height = img.height;
+                            const maxDim = 1280;
+                            if (width > maxDim || height > maxDim) {
+                                if (width > height) {
+                                    height = Math.round((height * maxDim) / width);
+                                    width = maxDim;
+                                } else {
+                                    width = Math.round((width * maxDim) / height);
+                                    height = maxDim;
+                                }
+                            }
+                            const canvas = document.createElement('canvas');
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                            const approxKb = (dataUrl.length * 0.75 / 1024).toFixed(1) + ' KB';
+                            callback(dataUrl, approxKb);
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                },
+
+                async runOcrOnImage(imgObj) {
+                    if (typeof Tesseract === 'undefined' || !Tesseract.recognize) {
+                        this.$set(imgObj, 'ocrStatus', 'skipped');
+                        return;
+                    }
+                    try {
+                        this.$set(imgObj, 'ocrStatus', 'processing');
+                        const result = await Tesseract.recognize(
+                            imgObj.dataUrl,
+                            'eng+tha',
+                            {
+                                logger: m => {
+                                    if (m.status === 'recognizing text' && m.progress) {
+                                        this.$set(imgObj, 'ocrProgress', Math.round(m.progress * 100));
+                                    }
+                                }
+                            }
+                        );
+                        const extractedText = (result && result.data && result.data.text) ? result.data.text.trim() : '';
+                        this.$set(imgObj, 'ocrText', extractedText);
+                        this.$set(imgObj, 'ocrStatus', extractedText ? 'done' : 'empty');
+                    } catch (err) {
+                        console.warn('[OCR] Recognition notice:', err.message);
+                        this.$set(imgObj, 'ocrStatus', 'failed');
+                    } finally {
+                        this.$forceUpdate();
+                    }
+                },
+
+                handleChatPaste(e) {
+                    const clipboardData = e.clipboardData || window.clipboardData;
+                    if (!clipboardData || !clipboardData.items) return;
+                    
+                    const items = clipboardData.items;
+                    let imageHandled = false;
+                    for (let i = 0; i < items.length; i++) {
+                        const item = items[i];
+                        if (item.type && item.type.indexOf('image') !== -1) {
+                            const file = item.getAsFile();
+                            if (file && !imageHandled) {
+                                imageHandled = true;
+                                if (e.preventDefault) e.preventDefault();
+                                if (e.stopPropagation) e.stopPropagation();
+
+                                this.compressImageFile(file, (dataUrl, sizeStr) => {
+                                    const exists = this.chatAttachedImages.some(img => img.dataUrl === dataUrl);
+                                    if (!exists) {
+                                        const imgObj = {
+                                            id: Date.now() + Math.random(),
+                                            dataUrl: dataUrl,
+                                            name: file.name || `screenshot_${Date.now()}.jpg`,
+                                            size: sizeStr,
+                                            ocrText: '',
+                                            ocrStatus: 'processing'
+                                        };
+                                        this.chatAttachedImages.push(imgObj);
+                                        this.runOcrOnImage(imgObj);
+                                    }
+                                });
+                                break;
+                            }
+                        }
+                    }
+                },
+
+                handleFileSelect(e) {
+                    const files = e.target.files;
+                    if (!files || files.length === 0) return;
+                    Array.from(files).forEach(file => {
+                        if (file.type && file.type.startsWith('image/')) {
+                            this.compressImageFile(file, (dataUrl, sizeStr) => {
+                                const exists = this.chatAttachedImages.some(img => img.dataUrl === dataUrl);
+                                if (!exists) {
+                                    const imgObj = {
+                                        id: Date.now() + Math.random(),
+                                        dataUrl: dataUrl,
+                                        name: file.name || `image_${Date.now()}.jpg`,
+                                        size: sizeStr,
+                                        ocrText: '',
+                                        ocrStatus: 'processing'
+                                    };
+                                    this.chatAttachedImages.push(imgObj);
+                                    this.runOcrOnImage(imgObj);
+                                }
+                            });
+                        }
+                    });
+                    if (this.$refs.chatImageInput) this.$refs.chatImageInput.value = '';
+                },
+
+                removeAttachedImage(index) {
+                    this.chatAttachedImages.splice(index, 1);
+                },
+
+                async sendChatMessage() {
+                    const text = (this.chatInputText || '').trim();
+                    const attachedImgs = [...this.chatAttachedImages.map(img => img.dataUrl)];
+                    if ((!text && attachedImgs.length === 0) || this.isChatSending) return;
+
+                    if (!this.openClawCookie) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'กรุณาระบุ Cookie',
+                            text: 'กรุณากรอกหรือวางค่า Cookie _openclaw_auth ก่อนเริ่มใช้งาน AI Chat',
+                            confirmButtonText: 'ตั้งค่า Cookie ตอนนี้',
+                            showCancelButton: true,
+                            cancelButtonText: 'ยกเลิก'
+                        }).then((res) => {
+                            if (res.isConfirmed) {
+                                this.showOpenClawConfigModal = true;
+                            }
+                        });
+                        return;
+                    }
+
+                    // Extract OCR text from attached images if available
+                    const attachedOcrTexts = this.chatAttachedImages
+                        .map((img, i) => img.ocrText ? `[ข้อความที่ตรวจพบจากรูปภาพที่ ${i+1} (${img.name}) ด้วย OCR]:\n${img.ocrText}` : '')
+                        .filter(Boolean);
+
+                    let userMsgContent = text || 'ช่วยตรวจสอบและวิเคราะห์รูปภาพนี้';
+                    if (attachedOcrTexts.length > 0) {
+                        userMsgContent += '\n\n' + attachedOcrTexts.join('\n\n');
+                    }
+
+                    // Add user message to history with images
+                    this.chatMessages.push({
+                        role: 'user',
+                        content: userMsgContent,
+                        images: attachedImgs,
+                        timestamp: new Date().toISOString()
+                    });
+                    this.chatInputText = '';
+                    this.chatAttachedImages = [];
+                    this.isChatSending = true;
+                    this.isAIChatCollapsed = false;
+                    this.scrollChatToBottom();
+
+                    // Setup cancellation tokens
+                    const CancelToken = (typeof axios !== 'undefined') ? axios.CancelToken : null;
+                    this.chatCancelSource = CancelToken ? CancelToken.source() : null;
+                    this.chatAbortController = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+
+                    try {
+                        const step = this.activeStep || {};
+                        const dynamicAnalysis = (step.stepNum && typeof this.getDynamicStepAnalysis === 'function') 
+                            ? this.getDynamicStepAnalysis(step) 
+                            : {};
+                        
+                        // Build all steps summary
+                        const allStepsSummary = (this.flowNodes || []).map(node => {
+                            return `Step ${node.stepNum} (${node.name}): Status=${node.status || 'idle'}, Desc=${node.description || '-'}`;
+                        }).join('\n');
+
+                        const axiosConfig = {};
+                        if (this.chatCancelSource) axiosConfig.cancelToken = this.chatCancelSource.token;
+                        if (this.chatAbortController) axiosConfig.signal = this.chatAbortController.signal;
+
+                        const res = await axios.post('/api/openclaw/chat', {
+                            messages: this.chatMessages.map(m => ({ 
+                                role: m.role, 
+                                content: m.content,
+                                images: m.images || []
+                            })),
+                            context: {
+                                doNumber: this.selectedDO ? this.selectedDO.do : '',
+                                selectedDODetails: this.selectedDO || null,
+                                selectedDate: this.selectedDate || '',
+                                isDiagnosed: !!this.diagnosticsResult,
+                                stepNum: step.stepNum || 1,
+                                stepName: step.name || '',
+                                stepStatus: step.status || 'idle',
+                                sql: step.sql || '',
+                                data: step.data || null,
+                                message: step.message || '',
+                                table: dynamicAnalysis.table || step.tableName || '',
+                                db: dynamicAnalysis.db || step.database || '',
+                                detectedCause: dynamicAnalysis.detectedCause || '',
+                                env: step.env || this.globalEnv,
+                                allStepsSummary: allStepsSummary,
+                                audit: (this.diagnosticsResult && this.diagnosticsResult.audit) ? this.diagnosticsResult.audit : null
+                            },
+                            cookie: this.openClawCookie,
+                            endpointUrl: this.openClawUrl
+                        }, axiosConfig);
+
+                        if (res.data && res.data.status === 200) {
+                            const replyData = res.data.data;
+                            this.chatMessages.push({
+                                role: 'assistant',
+                                content: replyData.reply,
+                                durationMs: replyData.durationMs,
+                                timestamp: replyData.timestamp || new Date().toISOString()
+                            });
+                            this.saveChatHistory();
+                        } else {
+                            throw new Error(res.data?.error || 'เกิดข้อผิดพลาดในการตอบกลับจาก AI');
+                        }
+                    } catch (err) {
+                        if (
+                            (axios.isCancel && axios.isCancel(err)) ||
+                            err.name === 'CanceledError' || 
+                            err.name === 'AbortError' || 
+                            err.message === 'User canceled request'
+                        ) {
+                            console.log('[OpenClaw] Request was stopped by user.');
+                            return;
+                        }
+                        console.error('Chat error:', err);
+                        const errorMsg = err.response?.data?.error || err.message;
+                        const hint = err.response?.data?.hint || '';
+                        this.chatMessages.push({
+                            role: 'assistant',
+                            content: `⚠️ **เกิดข้อผิดพลาด**: ${errorMsg}${hint ? `\n\n💡 *คำแนะนำ:* ${hint}` : ''}`,
+                            timestamp: new Date().toISOString()
+                        });
+                    } finally {
+                        this.isChatSending = false;
+                        this.chatCancelSource = null;
+                        this.chatAbortController = null;
+                        this.scrollChatToBottom();
+                    }
+                },
+
+                stopChatMessage() {
+                    if (this.chatCancelSource) {
+                        try { this.chatCancelSource.cancel('User canceled request'); } catch (e) {}
+                        this.chatCancelSource = null;
+                    }
+                    if (this.chatAbortController) {
+                        try { this.chatAbortController.abort(); } catch (e) {}
+                        this.chatAbortController = null;
+                    }
+                    this.isChatSending = false;
+                    this.chatMessages.push({
+                        role: 'assistant',
+                        content: '⏹️ *การคิดวิเคราะห์ถูกหยุดโดยผู้ใช้*',
+                        timestamp: new Date().toISOString()
+                    });
+                    this.saveChatHistory();
+                    this.scrollChatToBottom();
+                },
+
+                sendQuickPrompt(promptText) {
+                    if (!promptText) return;
+                    this.chatInputText = promptText;
+                    this.sendChatMessage();
+                },
+
+                askAIChatAboutStep(step) {
+                    if (!step) return;
+                    this.selectedNodeId = String(step.id || step.stepNum);
+                    this.isAIChatCollapsed = false;
+                    this.$nextTick(() => {
+                        const chatElem = document.getElementById('ai-chat-section');
+                        if (chatElem) {
+                            chatElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    });
+                    this.sendQuickPrompt(`วิเคราะห์ปัญหาและแนะนำ SQL Fix สำหรับ Step ${step.stepNum} (${step.name})`);
+                },
+
+                clearChatMessages() {
+                    this.chatMessages = [];
+                    sessionStorage.removeItem('openclaw_chat_history');
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: 'ล้างประวัติการสนทนาแล้ว',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                },
+
+                scrollChatToBottom() {
+                    this.$nextTick(() => {
+                        const el = this.$refs.chatMessagesContainer;
+                        if (el) {
+                            el.scrollTop = el.scrollHeight;
+                        }
+                    });
+                },
+
+                saveChatHistory() {
+                    try {
+                        sessionStorage.setItem('openclaw_chat_history', JSON.stringify((this.chatMessages || []).slice(-20)));
+                    } catch (e) {}
+                },
+
+                loadChatHistory() {
+                    try {
+                        const saved = sessionStorage.getItem('openclaw_chat_history');
+                        if (saved) {
+                            this.chatMessages = JSON.parse(saved);
+                        }
+                    } catch (e) {}
+                },
+
+                formatTime(ts) {
+                    if (!ts) return '';
+                    try {
+                        if (typeof window !== 'undefined' && typeof window.moment === 'function') {
+                            return window.moment(ts).format('HH:mm:ss');
+                        }
+                        const d = new Date(ts);
+                        return isNaN(d.getTime()) ? String(ts) : d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+                    } catch (e) {
+                        return '';
+                    }
+                },
+
+                formatDateTime(ts) {
+                    if (!ts) return '';
+                    try {
+                        if (typeof window !== 'undefined' && typeof window.moment === 'function') {
+                            return window.moment(ts).format('YYYY-MM-DD HH:mm:ss');
+                        }
+                        const d = new Date(ts);
+                        return isNaN(d.getTime()) ? String(ts) : d.toLocaleString('th-TH');
+                    } catch (e) {
+                        return '';
+                    }
+                },
+
+                moment(d) {
+                    if (typeof window !== 'undefined' && typeof window.moment === 'function') {
+                        return window.moment(d);
+                    }
+                    return { format: () => String(d || '') };
                 }
             }
         });

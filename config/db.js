@@ -352,5 +352,6 @@ module.exports = {
     exeQueryEnv: exeQueryEnv,
     insertQuery: insertQuery,
     exeQuerySQLServer: exeQuerySQLServer,    // Stub for backward compatibility
-    insertQuerySQLServer: insertQuerySQLServer  // Stub for backward compatibility
+    insertQuerySQLServer: insertQuerySQLServer,  // Stub for backward compatibility
+    getConnectionDetails: getConnectionDetails
 };

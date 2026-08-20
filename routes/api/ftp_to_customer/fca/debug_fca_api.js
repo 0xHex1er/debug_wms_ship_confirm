@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { exeQuery, exeQueryHitachi, exeQueryEnv, DB_PROD_WMS, DB_DEV_WMS, DB_PROD_HITACHI, DB_DEV_HITACHI } = require('../../../config/db.js');
+const { exeQuery, exeQueryHitachi, exeQueryEnv, DB_PROD_WMS, DB_DEV_WMS, DB_PROD_HITACHI, DB_DEV_HITACHI } = require('../../../../config/db.js');
 
 // Helper to determine environment name
 const resolveEnv = (env) => {
@@ -1278,6 +1278,7 @@ router.post('/debug/fca/clone-preview', async (req, res) => {
       }
 
       const [prefixRows] = await srcConn.query('SELECT * FROM WMS.HIT_SHIP_TO_MASTER WHERE prefix = ?', [prefix]);
+      const [logFtpRows] = await srcConn.query('SELECT * FROM WMS.HIT_TRANSFER_DATA_LOG_FTP WHERE do_no = ?', [doNumber]);
 
       const preview = {
         'WMS.SHIPMENTDO_DATA': (doRows || []).length,
@@ -1290,7 +1291,8 @@ router.post('/debug/fca/clone-preview', async (req, res) => {
         'WMS.HIT_SHIP_CONFIRM': (shipRows || []).length,
         'WMS.HIT_PALLET_DATA': (palletRows || []).length,
         'HITACHI.PROD_DATA': (hitRows || []).length,
-        'HITACHI.PACK_HEADER': (packRows || []).length
+        'HITACHI.PACK_HEADER': (packRows || []).length,
+        'WMS.HIT_TRANSFER_DATA_LOG_FTP': (logFtpRows || []).length
       };
 
       const previewRows = {
@@ -1304,7 +1306,8 @@ router.post('/debug/fca/clone-preview', async (req, res) => {
         'WMS.HIT_SHIP_CONFIRM': shipRows || [],
         'WMS.HIT_PALLET_DATA': palletRows || [],
         'HITACHI.PROD_DATA': hitRows || [],
-        'HITACHI.PACK_HEADER': packRows || []
+        'HITACHI.PACK_HEADER': packRows || [],
+        'WMS.HIT_TRANSFER_DATA_LOG_FTP': logFtpRows || []
       };
 
       const totalPreviewRows = Object.values(preview).reduce((a, b) => a + b, 0);
@@ -1428,6 +1431,10 @@ router.post('/debug/fca/clone-to-dev', async (req, res) => {
       // 10. HIT_SHIP_TO_MASTER
       const r11 = await cloneTableRows(DB_PROD_WMS, DB_DEV_WMS, 'WMS.HIT_SHIP_TO_MASTER', 'SELECT * FROM WMS.HIT_SHIP_TO_MASTER WHERE prefix = ?', [prefix]);
       stats.push(r11);
+
+      // 11. HIT_TRANSFER_DATA_LOG_FTP
+      const r12 = await cloneTableRows(DB_PROD_WMS, DB_DEV_WMS, 'WMS.HIT_TRANSFER_DATA_LOG_FTP', 'SELECT * FROM WMS.HIT_TRANSFER_DATA_LOG_FTP WHERE do_no = ?', [doNumber]);
+      stats.push(r12);
 
       const totalRowsCloned = stats.reduce((sum, s) => sum + (s.count || 0), 0);
       const executionTime = Date.now() - tStart;

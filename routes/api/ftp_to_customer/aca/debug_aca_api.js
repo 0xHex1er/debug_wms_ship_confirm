@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { exeQuery } = require('../../../config/db.js');
+const { exeQuery } = require('../../../../config/db.js');
 
 // 1. Fetch DOs for selected date
 router.post('/debug/aca/dos', async (req, res) => {

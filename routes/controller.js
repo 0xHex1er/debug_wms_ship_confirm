@@ -16,19 +16,19 @@ router.get('/main_menu', checkLoginSession, (req, res) => {
 })
 
 router.get('/debug-aca', checkLoginSession, (req, res) => {
-  res.render('pages/aca/debug_aca')
+  res.render('pages/ftp_to_customer/aca/debug_aca')
 })
 
 router.get('/debug-fca', checkLoginSession, (req, res) => {
-  res.render('pages/fca/debug_fca')
+  res.render('pages/ftp_to_customer/fca/debug_fca')
 })
 
 router.get('/debug-fca-advanced', checkLoginSession, (req, res) => {
-  res.render('pages/fca/debug_fca_advanced')
+  res.render('pages/ftp_to_customer/fca/debug_fca_advanced')
 })
 
 router.get('/fca-flow', checkLoginSession, (req, res) => {
-  res.render('pages/fca/fca_flow_interactive')
+  res.render('pages/ftp_to_customer/fca/fca_flow_interactive')
 })
 
 
