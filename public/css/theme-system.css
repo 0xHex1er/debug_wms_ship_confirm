@@ -8,83 +8,147 @@
 [data-theme="dark"],
 html:not([data-theme="light"]) body,
 [data-theme="dark"] body {
-    background-color: #080d1a !important;
+    background-color: #060911 !important;
+    background-image: 
+        radial-gradient(at 15% 15%, rgba(225, 29, 72, 0.08) 0px, transparent 50%),
+        radial-gradient(at 85% 85%, rgba(79, 70, 229, 0.06) 0px, transparent 50%) !important;
+    background-attachment: fixed;
     color: #f8fafc !important;
 }
 
-/* Primary Card Surfaces - Distinct & High Contrast */
-[data-theme="dark"] .bg-white,
+/* Primary Card Surfaces - Signature Crimson Top Border Accent (Matches Main Menu) */
+[data-theme="dark"] .bg-white.rounded-2xl,
+[data-theme="dark"] .bg-white.rounded-3xl,
+[data-theme="dark"] .bg-white.p-4,
+[data-theme="dark"] .bg-white.p-5,
+[data-theme="dark"] .bg-white.p-6,
+[data-theme="dark"] .card-accent-border {
+    position: relative;
+    background-color: #0c1322 !important;
+    border-color: #1e293b !important;
+    border-top: 2px solid #e11d48 !important;
+    color: #f8fafc !important;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6), 0 0 20px -3px rgba(225, 29, 72, 0.1) !important;
+}
+
+/* Sub-surfaces & nested cards */
+[data-theme="dark"] .bg-white {
+    background-color: #0c1322 !important;
+    border-color: #1e293b !important;
+    color: #f8fafc !important;
+}
+
 [data-theme="dark"] .bg-slate-50,
 [data-theme="dark"] .bg-slate-50\/70,
 [data-theme="dark"] .bg-slate-50\/60 {
-    background-color: #0f172a !important;
-    border-color: #334155 !important;
+    background-color: #070b16 !important;
+    border-color: #1e293b !important;
     color: #f8fafc !important;
 }
 
 /* High Contrast Borders */
 [data-theme="dark"] .border-slate-200,
 [data-theme="dark"] .border-slate-150,
-[data-theme="dark"] .border-slate-100,
+[data-theme="dark"] .border-slate-100 {
+    border-color: #1e293b !important;
+}
+
 [data-theme="dark"] .border-slate-300 {
     border-color: #334155 !important;
 }
 
 /* High Contrast Typography - Crystal Clear Readability */
 [data-theme="dark"] .text-slate-900,
-[data-theme="dark"] .text-slate-800,
-[data-theme="dark"] .text-slate-700 {
+[data-theme="dark"] .text-slate-800 {
     color: #ffffff !important;
-    font-weight: 600;
+    font-weight: 700 !important;
+}
+
+[data-theme="dark"] .text-slate-700 {
+    color: #f1f5f9 !important;
+    font-weight: 600 !important;
 }
 
 [data-theme="dark"] .text-slate-600,
-[data-theme="dark"] .text-slate-550,
-[data-theme="dark"] .text-slate-500 {
-    color: #cbd5e1 !important; /* Bright slate for excellent contrast */
+[data-theme="dark"] .text-slate-550 {
+    color: #cbd5e1 !important; /* Bright slate for crystal clear readability */
+    font-weight: 500;
 }
 
+[data-theme="dark"] .text-slate-500,
 [data-theme="dark"] .text-slate-400 {
     color: #94a3b8 !important;
 }
 
-/* Input Fields & Selects */
+/* Input Fields, Textareas & Selects */
 [data-theme="dark"] input[type="date"],
 [data-theme="dark"] input[type="text"],
 [data-theme="dark"] input[type="password"],
-[data-theme="dark"] select {
-    background-color: #030712 !important;
-    border-color: #475569 !important;
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+    background-color: #050811 !important;
+    border-color: #334155 !important;
     color: #ffffff !important;
 }
 
 [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(1);
+    cursor: pointer;
 }
 
-/* Nested Sub-Containers & Tables */
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] select:focus {
+    border-color: #f43f5e !important;
+    box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.25) !important;
+}
+
+/* DO Chips & Filter Elements */
+[data-theme="dark"] .bg-slate-50.text-slate-700 {
+    background-color: #10192e !important;
+    border-color: #1e2d4a !important;
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .bg-slate-50.text-slate-700:hover {
+    background-color: #192644 !important;
+    border-color: #38bdf8 !important;
+    color: #ffffff !important;
+}
+
+/* Empty State Notice Card */
+[data-theme="dark"] .border-dashed {
+    background-color: #070b16 !important;
+    border-color: #27354f !important;
+    color: #cbd5e1 !important;
+}
+
+/* Nested Badges & Status Blocks */
 [data-theme="dark"] .bg-slate-100,
-[data-theme="dark"] .bg-slate-100\/80 {
+[data-theme="dark"] .bg-slate-100\/80,
+[data-theme="dark"] .bg-slate-100\/90 {
     background-color: #050a14 !important;
+    border-color: #1e293b !important;
     color: #e2e8f0 !important;
 }
 
 [data-theme="dark"] .bg-indigo-50,
 [data-theme="dark"] .bg-indigo-50\/70,
+[data-theme="dark"] .bg-indigo-50\/60,
 [data-theme="dark"] .bg-indigo-50\/40 {
-    background-color: #1e1b4b !important;
-    border-color: #4f46e5 !important;
+    background-color: #151638 !important;
+    border-color: #4338ca !important;
     color: #c7d2fe !important;
 }
 
 [data-theme="dark"] .bg-emerald-50 {
-    background-color: #064e3b !important;
+    background-color: #042f24 !important;
     border-color: #059669 !important;
     color: #a7f3d0 !important;
 }
 
 [data-theme="dark"] .bg-amber-50 {
-    background-color: #78350f !important;
+    background-color: #451a03 !important;
     border-color: #d97706 !important;
     color: #fde68a !important;
 }
@@ -105,32 +169,40 @@ html:not([data-theme="light"]) body,
 /* Flowchart Canvas in Dark Mode */
 [data-theme="dark"] .vue2-flow-canvas,
 [data-theme="dark"] .v-flow {
-    background-color: #070c18 !important;
+    background-color: #060913 !important;
 }
 
 [data-theme="dark"] .vue2-flow-grid {
-    opacity: 0.25 !important;
+    opacity: 0.3 !important;
 }
 
 /* Flow Nodes in Dark Mode */
 [data-theme="dark"] .v-flow .rounded-xl.border.bg-white {
-    background-color: #131d31 !important;
-    border-color: #3b4861 !important;
+    background-color: #0f172a !important;
+    border-color: #27354f !important;
+    border-top: 2px solid #38bdf8 !important;
     color: #ffffff !important;
-    box-shadow: 0 4px 15px -1px rgba(0, 0, 0, 0.4) !important;
+    box-shadow: 0 6px 20px -2px rgba(0, 0, 0, 0.5) !important;
 }
 
 [data-theme="dark"] .v-flow .rounded-xl.border.bg-white:hover {
     border-color: #38bdf8 !important;
+    box-shadow: 0 0 25px rgba(56, 189, 248, 0.25) !important;
 }
 
-/* Node Title in Dark Mode */
+/* Flow Node in Selected State (Ruby Red Glow - No Harsh White Ring) */
+[data-theme="dark"] .v-flow .rounded-xl.border.node-selected {
+    border: 2px solid #f43f5e !important;
+    border-top: 3px solid #f43f5e !important;
+    box-shadow: 0 0 25px rgba(244, 63, 94, 0.5), 0 8px 25px -3px rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Node Title & Labels in Dark Mode */
 [data-theme="dark"] .v-flow .text-slate-800 {
     color: #ffffff !important;
     font-weight: 700 !important;
 }
 
-/* Node Table Name in Dark Mode (Vivid Bright Cyan) */
 [data-theme="dark"] .v-flow .text-slate-400.font-mono,
 [data-theme="dark"] .v-flow .text-slate-400 {
     color: #38bdf8 !important;
@@ -139,8 +211,8 @@ html:not([data-theme="light"]) body,
 
 /* Node Bottom Bar */
 [data-theme="dark"] .v-flow .bg-slate-50 {
-    background-color: #090f1d !important;
-    border-color: #243048 !important;
+    background-color: #060a14 !important;
+    border-color: #1e293b !important;
     color: #e2e8f0 !important;
 }
 
@@ -149,15 +221,24 @@ html:not([data-theme="light"]) body,
     font-weight: 600 !important;
 }
 
+/* Code Inspector & Query blocks */
+[data-theme="dark"] pre,
+[data-theme="dark"] code {
+    background-color: #03060d !important;
+    color: #e2e8f0 !important;
+    border-color: #1e293b !important;
+}
+
 /* Custom Scrollbar in Dark Mode */
 [data-theme="dark"] .custom-scrollbar::-webkit-scrollbar-track {
-    background: #090d16 !important;
+    background: #060911 !important;
 }
 [data-theme="dark"] .custom-scrollbar::-webkit-scrollbar-thumb {
     background: #334155 !important;
+    border-radius: 4px;
 }
 [data-theme="dark"] .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #475569 !important;
+    background: #e11d48 !important;
 }
 
 /* --------------------------------------------------------------------------

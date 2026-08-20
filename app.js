@@ -22,8 +22,8 @@ const app = express();
 app.use(cors());
 app.set('view engine', 'ejs');
 app.options('*', cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // สำหรับ form data
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true })); // สำหรับ form data
 
 let mySqlConnection;
 if (process.env.NODE_ENV === 'local') {

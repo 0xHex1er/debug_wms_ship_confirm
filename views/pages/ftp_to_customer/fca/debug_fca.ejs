@@ -20,10 +20,14 @@
         }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased font-sans">
+<body class="bg-slate-950 text-slate-100 antialiased font-sans min-h-screen relative selection:bg-rose-500 selection:text-white">
     <%- include('../../../partials/header') %>
 
-    <div id="vue-app" class="w-full px-4 sm:px-6 lg:px-8 py-5 pb-28" v-cloak>
+    <!-- Ambient Glowing Light Orbs (Matches Main Menu) -->
+    <div class="fixed top-20 left-1/4 -translate-x-1/2 w-[500px] h-[500px] bg-rose-600/10 rounded-full blur-3xl pointer-events-none z-0"></div>
+    <div class="fixed bottom-10 right-1/4 translate-x-1/2 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-3xl pointer-events-none z-0"></div>
+
+    <div id="vue-app" class="w-full px-4 sm:px-6 lg:px-8 py-5 pb-28 relative z-10" v-cloak>
         
         <!-- Header Section -->
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 pb-4 border-b border-slate-200">
@@ -122,7 +126,9 @@
         </div>
 
         <!-- Top Control Bar -->
-        <div class="bg-white p-4 lg:p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+        <div class="bg-white p-4 lg:p-5 rounded-2xl border border-slate-200 shadow-sm mb-6 relative overflow-hidden">
+            <!-- Top Gradient Accent Line (Matches Main Menu) -->
+            <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 via-red-500 to-amber-500"></div>
             <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
                 <!-- Date Picker -->
                 <div class="md:col-span-3">
@@ -258,7 +264,9 @@
             
             <!-- Left 8 Cols: Vue2-flow Interactive Canvas -->
             <div class="lg:col-span-8 flex flex-col">
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex-grow flex flex-col">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex-grow flex flex-col relative overflow-hidden">
+                    <!-- Top Gradient Accent Line (Matches Main Menu) -->
+                    <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 via-indigo-500 to-cyan-500"></div>
                     <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-150">
                         <div class="flex items-center gap-2">
                             <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
@@ -378,7 +386,9 @@
 
             <!-- Right 4 Cols: Step Inspector Drawer Panel -->
             <div class="lg:col-span-4 flex flex-col">
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 lg:p-5 flex-grow flex flex-col max-h-[650px] overflow-y-auto custom-scrollbar">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 lg:p-5 flex-grow flex flex-col max-h-[650px] overflow-y-auto custom-scrollbar relative overflow-hidden">
+                    <!-- Top Gradient Accent Line (Matches Main Menu) -->
+                    <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 via-red-500 to-amber-500"></div>
                     
                     <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-150">
                         <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -847,6 +857,32 @@
                                 </button>
                             </div>
 
+                            <!-- Executed API Queries Badge (If AI used intermediate query API) -->
+                            <div v-if="msg.executedQueries && msg.executedQueries.length > 0" class="mb-2.5 p-2 bg-emerald-50/80 rounded-xl border border-emerald-200/80 text-xs">
+                                <div class="flex items-center justify-between font-bold text-emerald-800 text-[11px]">
+                                    <span class="flex items-center gap-1.5">
+                                        <span class="text-xs">⚡</span> 
+                                        <span>AI ดึงข้อมูลผ่าน API Query ตัวกลาง ({{ msg.executedQueries.length }} คำสั่ง)</span>
+                                    </span>
+                                    <button 
+                                        type="button"
+                                        @click="$set(msg, 'showQueries', !msg.showQueries)" 
+                                        class="text-[10.5px] text-emerald-700 hover:text-emerald-900 underline font-medium cursor-pointer"
+                                    >
+                                        {{ msg.showQueries ? '▲ ซ่อนคำสั่ง SQL' : '▼ ดูคำสั่ง & ตาราง SQL' }}
+                                    </button>
+                                </div>
+                                <div v-if="msg.showQueries" class="space-y-2 mt-2 pt-2 border-t border-emerald-200/60 font-mono text-[10.5px]">
+                                    <div v-for="(q, qIdx) in msg.executedQueries" :key="qIdx" class="bg-white p-2 rounded-lg border border-emerald-200">
+                                        <div class="flex items-center justify-between text-slate-600 text-[9.5px] mb-1">
+                                            <span>🔌 ฐานข้อมูล: <b class="text-emerald-700 font-bold">{{ q.connectionName || q.env }} ({{ q.db }})</b></span>
+                                            <span>📊 พบ <b>{{ q.count }}</b> แถว ({{ q.durationMs }}ms)</span>
+                                        </div>
+                                        <pre class="bg-slate-900 text-cyan-300 p-2 rounded-md text-[10px] overflow-x-auto whitespace-pre-wrap leading-relaxed">{{ q.sql }}</pre>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Content -->
                             <div 
                                 v-if="msg.role === 'assistant'" 
@@ -854,6 +890,15 @@
                                 v-html="formatMarkdown(msg.content)"
                             ></div>
                             <div v-else>
+                                <!-- Header for User Message (Matches Navbar Profile Name & Online Dot) -->
+                                <div class="flex items-center justify-between gap-2 pb-1 mb-1.5 border-b border-white/20 text-[10px] text-white/90">
+                                    <div class="flex items-center gap-1.5 font-bold">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                        <span>{{ currentUsername || 'admin_debug' }}</span>
+                                    </div>
+                                    <span class="font-mono text-[9px] text-indigo-100 opacity-75">{{ formatTime(msg.timestamp) }}</span>
+                                </div>
+
                                 <!-- Attached User Images in bubble -->
                                 <div v-if="msg.images && msg.images.length > 0" class="flex flex-wrap gap-1.5 mb-1.5">
                                     <img 
@@ -871,15 +916,19 @@
                                 </div>
                             </div>
 
-                            <!-- Timestamp -->
-                            <div :class="['text-[9px] mt-0.5 font-mono', msg.role === 'user' ? 'text-indigo-200 text-right opacity-80' : 'text-slate-400 text-left mt-1.5']">
+                            <!-- Timestamp for Assistant -->
+                            <div v-if="msg.role === 'assistant'" class="text-[9px] font-mono text-slate-400 text-left mt-1.5">
                                 {{ formatTime(msg.timestamp) }}
                             </div>
                         </div>
 
-                        <!-- User Avatar -->
-                        <div v-if="msg.role === 'user'" class="w-6 h-6 rounded-lg bg-indigo-500 flex items-center justify-center text-[11px] font-bold text-white shrink-0 mt-0.5 shadow-2xs">
-                            👤
+                        <!-- User Avatar (Matches Header Pill with Gradient Orange-Red & Initial Letter) -->
+                        <div 
+                            v-if="msg.role === 'user'" 
+                            class="w-6 h-6 rounded-full bg-gradient-to-tr from-rose-600 to-amber-500 flex items-center justify-center text-white text-[11px] font-bold shrink-0 mt-0.5 shadow-xs uppercase select-none border border-white/20 ring-1 ring-amber-400/40"
+                            :title="currentUsername || 'admin_debug'"
+                        >
+                            {{ (currentUsername ? currentUsername.charAt(0) : 'A').toUpperCase() }}
                         </div>
                     </div>
 
@@ -918,6 +967,19 @@
                             <span :class="['font-mono text-xs px-2 py-0.5 rounded border font-bold', ((activeStep && activeStep.env) ? activeStep.env : globalEnv) === 'development' ? 'bg-amber-50 text-amber-700 border-amber-300' : 'bg-emerald-50 text-emerald-700 border-emerald-300']">
                                 🔌 {{ ((activeStep && activeStep.env) ? activeStep.env : globalEnv) === 'development' ? 'Dev (BITINTRADEV)' : 'Prod (BITINTRA_REAL)' }}
                             </span>
+
+                            <!-- Use API Query Toggle Option -->
+                            <label 
+                                class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border text-xs font-semibold cursor-pointer select-none transition shadow-2xs"
+                                :class="useApiQuery ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-500 shadow-emerald-500/20' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'"
+                                title="เมื่อเปิด: AI จะเรียก API ตัวกลางเพื่อรัน SQL ดึงข้อมูลสดมาตอบจริง | เมื่อปิด: AI จะตอบเป็น Raw SQL เหมือนเดิม"
+                            >
+                                <input type="checkbox" v-model="useApiQuery" @change="saveUseApiQueryPref" class="rounded text-emerald-600 focus:ring-0 cursor-pointer w-3.5 h-3.5" />
+                                <span class="flex items-center gap-1">
+                                    <span>⚡ Use API Query</span>
+                                    <span v-if="useApiQuery" class="text-[8.5px] bg-white/25 px-1 rounded uppercase font-mono">Live Data</span>
+                                </span>
+                            </label>
 
                             <!-- Attach Image Button -->
                             <button 
@@ -1649,6 +1711,8 @@
                 openClawResults: {},
                 openClawTesting: false,
                 openClawTestResult: null,
+                useApiQuery: localStorage.getItem('openclaw_use_api_query') === 'true',
+                currentUsername: (typeof document !== 'undefined' && document.getElementById('username')?.value) ? document.getElementById('username').value.trim() : (localStorage.getItem('username') || 'admin_debug'),
                 chatMessages: [],
                 chatInputText: '',
                 chatAttachedImages: [],
@@ -2093,6 +2157,14 @@
             },
 
             mounted() {
+                // Resolve current username from header input
+                const userEl = document.getElementById('username');
+                if (userEl && userEl.value && userEl.value.trim() !== '') {
+                    this.currentUsername = userEl.value.trim();
+                } else if (localStorage.getItem('username')) {
+                    this.currentUsername = localStorage.getItem('username');
+                }
+
                 // Set default date to today or 2026-08-10 for sample data
                 const today = new Date().toISOString().slice(0, 10);
                 this.selectedDate = today;
@@ -2150,16 +2222,15 @@
 
                 getNodeBorderClass(node, isSelected) {
                     const status = node.status || 'default';
-                    let border = 'border-slate-200';
                     if (isSelected) {
-                        return 'border-indigo-600 ring-4 ring-indigo-100 shadow-md';
+                        return 'border-2 border-rose-500 shadow-[0_0_25px_rgba(244,63,94,0.45)] node-selected';
                     }
                     switch (status) {
-                        case 'success': return 'border-emerald-400 hover:border-emerald-500';
-                        case 'running': return 'border-blue-500 ring-4 ring-blue-100 animate-pulse';
-                        case 'error': return 'border-rose-400 hover:border-rose-500 shadow-sm';
-                        case 'warning': return 'border-amber-400 hover:border-amber-500';
-                        default: return 'border-slate-200 hover:border-slate-300';
+                        case 'success': return 'border-emerald-500/80 hover:border-emerald-400 shadow-sm';
+                        case 'running': return 'border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.5)] animate-pulse';
+                        case 'error': return 'border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.4)]';
+                        case 'warning': return 'border-amber-500 shadow-sm';
+                        default: return 'border-slate-300 dark:border-slate-700/80 hover:border-slate-400';
                     }
                 },
 
@@ -3065,6 +3136,18 @@
                     });
                 },
 
+                saveUseApiQueryPref() {
+                    localStorage.setItem('openclaw_use_api_query', String(this.useApiQuery));
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: this.useApiQuery ? 'success' : 'info',
+                        title: this.useApiQuery ? 'เปิดใช้งาน Use API Query (AI จะดึงข้อมูลสดผ่าน API)' : 'ปิด Use API Query (AI จะตอบเป็น Raw SQL)',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                },
+
                 async testOpenClawConnection() {
                     if (!this.openClawCookie) {
                         Swal.fire({
@@ -3407,6 +3490,7 @@
                                 allStepsSummary: allStepsSummary,
                                 audit: (this.diagnosticsResult && this.diagnosticsResult.audit) ? this.diagnosticsResult.audit : null
                             },
+                            useApiQuery: this.useApiQuery,
                             cookie: this.openClawCookie,
                             endpointUrl: this.openClawUrl
                         }, axiosConfig);
@@ -3417,7 +3501,8 @@
                                 role: 'assistant',
                                 content: replyData.reply,
                                 durationMs: replyData.durationMs,
-                                timestamp: replyData.timestamp || new Date().toISOString()
+                                timestamp: replyData.timestamp || new Date().toISOString(),
+                                executedQueries: replyData.executedQueries || []
                             });
                             this.saveChatHistory();
                         } else {

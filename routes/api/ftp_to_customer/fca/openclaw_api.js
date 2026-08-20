@@ -1,10 +1,39 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const { exeQueryEnv } = require('../../../../config/db.js');
 
 // Default Open Claw Base URL
 const DEFAULT_OPENCLAW_URL = process.env.OPENCLAW_BASE_URL || 'https://openclaw-th.beltontechnology.com';
+
+/**
+ * Helper to dynamically load FCA business rules and DB schema documentation
+ */
+const loadFcaRulesAndSchema = () => {
+  let schemaContent = '';
+  let rulesContent = '';
+  try {
+    const schemaPath = path.join(__dirname, '../../../../config/ai_rules/ftp_to_customer/fca/db_schema.md');
+    if (fs.existsSync(schemaPath)) {
+      schemaContent = fs.readFileSync(schemaPath, 'utf8');
+    }
+  } catch (e) {
+    console.warn('[OpenClaw] Warning loading ftp_to_customer/fca/db_schema.md:', e.message);
+  }
+
+  try {
+    const rulesPath = path.join(__dirname, '../../../../config/ai_rules/ftp_to_customer/fca/rules.md');
+    if (fs.existsSync(rulesPath)) {
+      rulesContent = fs.readFileSync(rulesPath, 'utf8');
+    }
+  } catch (e) {
+    console.warn('[OpenClaw] Warning loading ftp_to_customer/fca/rules.md:', e.message);
+  }
+
+  return { schemaContent, rulesContent };
+};
 
 /**
  * Helper to resolve Open Claw auth token/cookie from environment
@@ -135,6 +164,75 @@ const fetchLiveDoContext = async (doNumber, env = 'production') => {
 };
 
 /**
+ * Safe Intermediate Query Executor
+ * Accepts: { env, db, table, sql }
+ */
+const executeIntermediateQuery = async ({ env = 'production', db = 'wms', table, sql }) => {
+  if (!sql || typeof sql !== 'string') {
+    return { success: false, error: 'SQL query string is required' };
+  }
+
+  const cleanSql = sql.trim();
+  const normalizedSql = cleanSql.replace(/;+$/, '');
+  const firstWord = normalizedSql.split(/\s+/)[0].toUpperCase();
+  const allowedWords = ['SELECT', 'SHOW', 'DESCRIBE', 'DESC', 'EXPLAIN', 'WITH'];
+  
+  if (!allowedWords.includes(firstWord)) {
+    return {
+      success: false,
+      error: `คำสั่ง '${firstWord}' ไม่อนุญาตผ่าน API ตัวกลาง (อนุญาตเฉพาะคำสั่งอ่านข้อมูล เช่น SELECT / DESCRIBE เท่านั้น)`,
+      sql: normalizedSql
+    };
+  }
+
+  const targetEnv = (env === 'development' || env === 'dev') ? 'development' : 'production';
+  let targetDb = String(db || 'wms').toLowerCase().trim();
+
+  // Smart DB resolution mapping (Handles aliases like 'prod_data', 'hitachi_db', etc.)
+  if (['prod_data', 'hitachi', 'sgfcdb02', 'hitachi_db', 'prod'].includes(targetDb)) {
+    targetDb = 'hitachi';
+  } else if (['hgstaca', 'wdhudb01', 'aca'].includes(targetDb)) {
+    targetDb = 'hgstaca';
+  } else if (['wms', 'bitintra', 'wms_db'].includes(targetDb)) {
+    targetDb = 'wms';
+  }
+
+  // Auto-detect target DB from SQL if references HITACHI or HGSTACA
+  const upperSql = normalizedSql.toUpperCase();
+  if (upperSql.includes('HITACHI.') || upperSql.includes('PROD_DATA') || upperSql.includes('PACK_HEADER')) {
+    targetDb = 'hitachi';
+  } else if (upperSql.includes('HGSTACA.')) {
+    targetDb = 'hgstaca';
+  }
+
+  const startTime = Date.now();
+
+  try {
+    const rows = await exeQueryEnv(targetDb, targetEnv, normalizedSql, []);
+    const durationMs = Date.now() - startTime;
+    return {
+      success: true,
+      env: targetEnv,
+      connectionName: targetEnv === 'development' ? 'Development (BITINTRADEV)' : 'Production (BITINTRA_REAL)',
+      db: targetDb,
+      table: table || null,
+      sql: normalizedSql,
+      count: Array.isArray(rows) ? rows.length : (rows ? 1 : 0),
+      rows: Array.isArray(rows) ? rows.slice(0, 30) : rows,
+      durationMs
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err.message,
+      sql: normalizedSql,
+      env: targetEnv,
+      db: targetDb
+    };
+  }
+};
+
+/**
  * Helper to build prompt for WMS Ship Confirm Step diagnosis
  */
 const buildDiagnosticPrompt = ({ stepNum, stepName, doNumber, sql, data, message, table, db, detectedCause, env, liveDbData }) => {
@@ -158,6 +256,8 @@ ${JSON.stringify(liveDbData.logFtp, null, 2)}
 `;
   }
 
+  const { schemaContent, rulesContent } = loadFcaRulesAndSchema();
+
   return `
 กรุณาวินิจฉัยข้อผิดพลาดของขั้นตอนระบบ WMS Ship Confirm ต่อไปนี้:
 
@@ -179,78 +279,70 @@ ${sql || '(ไม่มีคำสั่ง SQL)'}
 ${typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data || 'ไม่มีข้อมูล')}
 \`\`\`
 ${liveDbSection}
+${rulesContent ? `\n[FCA BUSINESS RULES & SYSTEM INSTRUCTIONS]:\n${rulesContent}\n` : ''}
+${schemaContent ? `\n[FCA DATABASE SCHEMA & DATA DICTIONARY]:\n${schemaContent}\n` : ''}
 [คำสั่งที่ต้องการจาก AI]:
 1. ระบุชื่อฐานข้อมูลและ Connection (${liveDbData ? liveDbData.connectionName : env}) ที่ใช้ตรวจสอบ
 2. วิเคราะห์สาเหตุที่ทำให้เกิดปัญหานี้อย่างละเอียดและตรงประเด็น โดยอ้างอิงจากข้อมูลจริงในฐานข้อมูลด้านบน (ตอบเป็นภาษาไทย)
-3. ให้แนวทางแก้ไข พร้อมคำสั่ง SQL ที่ต้องใช้ตรวจสอบหรือแก้ไขข้อมูล (ถ้ามี) ให้ระบุอย่างชัดเจนและปลอดภัย
+3. ให้แนวทางแก้ไข พร้อมคำสั่ง SQL ที่ต้องใช้ตรวจสอบหรือแก้ไขข้อมูล (ถ้ามี) ให้ระบุอย่างชัดเจนและปลอดภัยตาม Schema จริง
 `;
 };
 
 /**
  * Helper to build rich System Prompt for interactive Chat with Live DB Grounding & Connection Awareness
  */
-const buildChatSystemPrompt = (context = {}) => {
-  const {
-    doNumber,
-    selectedDODetails,
-    selectedDate,
-    isDiagnosed,
-    stepNum,
-    stepName,
-    stepStatus,
-    sql,
-    data,
-    message,
-    table,
-    db,
-    detectedCause,
-    env,
-    allStepsSummary,
-    audit,
-    liveDbData
-  } = context;
-
-  const currentConnectionName = liveDbData ? liveDbData.connectionName : (env === 'development' ? 'Development (BITINTRADEV)' : 'Production (BITINTRA_REAL)');
+const buildChatSystemPrompt = ({ doNumber, selectedDate, selectedDODetails, isDiagnosed, stepNum, stepName, stepStatus, table, db, message, detectedCause, sql, data, allStepsSummary, audit, env = 'production', liveDbData, useApiQuery = false }) => {
+  const currentConnectionName = env === 'development' ? 'Development (BITINTRADEV)' : 'Production (BITINTRA_REAL)';
 
   let liveDbPromptSection = '';
-  if (liveDbData && !liveDbData.queryError) {
+  if (liveDbData) {
     let crossCheckInfo = '';
     if (liveDbData.otherEnvCheck && liveDbData.otherEnvCheck.count > 0) {
-      crossCheckInfo = `\n⚠️ ข้อสังเกตพิเศษ: ไม่พบข้อมูลใน ${liveDbData.connectionName} แต่ระบบตรวจพบข้อมูล DO นี้ใน ${liveDbData.otherEnvCheck.connectionName} จำนวน ${liveDbData.otherEnvCheck.count} รายการ (ผู้ใช้กำลังเลือกโหมด ${liveDbData.connectionName} อยู่)`;
+      crossCheckInfo = `
+⚠️ [CROSS-CONNECTION NOTICE]:
+- ตรวจพบว่า DO "${liveDbData.do}" มีข้อมูลอยู่บน ${liveDbData.otherEnvCheck.connectionName} จำนวน ${liveDbData.otherEnvCheck.count} รายการ
+- แนะนำให้ผู้ใช้สลับโหมด หรือใช้ปุ่ม "Clone Data to Development" หากต้องการทดสอบบน Dev`;
     }
 
     liveDbPromptSection = `
-[GROUND TRUTH: ข้อมูลจริงสดจากฐานข้อมูล Database (Connection: ${liveDbData.connectionName})]:
-- DO Number: ${liveDbData.do}
-- Target Database Connection: ${liveDbData.connectionName}
-- ตาราง WMS.HIT_SHIP_CONFIRM:
-  * จำนวนรายการทั้งหมดที่พบใน ${liveDbData.connectionName}: ${liveDbData.hitShipConfirmCount} แถว
-  * รายการสถานะ PACK (ยิงยืนยันแพ็คแล้ว): ${liveDbData.packSummary.count} แถว (ยอด QTY รวม: ${liveDbData.packSummary.totalQty.toLocaleString()} ชิ้น)
-  * วันที่/เวลาที่บันทึกใน HIT_SHIP_CONFIRM (date): ${liveDbData.packSummary.distinctDates.join(', ') || 'ไม่มี'}
-  * หมายเลข Pallet (pallet_no): ${liveDbData.packSummary.distinctPallets.join(', ') || 'ไม่มี'}
-  * รายการ SHIP BOX: ${liveDbData.shipBoxSummary.count} แถว (ยอด QTY รวม: ${liveDbData.shipBoxSummary.totalQty.toLocaleString()} ชิ้น)
-  * ตัวอย่างข้อมูล 5 แถวแรกใน HIT_SHIP_CONFIRM:
+[GROUND TRUTH: ข้อมูลจริงสดจากฐานข้อมูล Database (${liveDbData.connectionName})]:
+- DO Number ที่กำลังตรวจสอบ: ${liveDbData.do}
+- จำนวนแถวทั้งหมดใน WMS.HIT_SHIP_CONFIRM: ${liveDbData.hitShipConfirmCount} แถว
+- ตาราง WMS.HIT_SHIP_CONFIRM (เฉพาะ type='PACK'):
+  * จำนวนแถว PACK: ${liveDbData.packSummary.count} แถว
+  * ยอดรวม QTY (PACK): ${liveDbData.packSummary.totalQty} ชิ้น
+  * หมายเลขพาเลท: ${liveDbData.packSummary.distinctPallets.join(', ') || '-'}
+  * วันที่/เวลาบันทึก (Date): ${liveDbData.packSummary.distinctDates.join(', ') || '-'}
+  * ตัวอย่างแถว PACK (Top 20):
 \`\`\`json
-${JSON.stringify(liveDbData.packRows.slice(0, 5), null, 2)}
+${JSON.stringify(liveDbData.packRows, null, 2)}
 \`\`\`
 
 - ตาราง WMS.SHIPMENTPLAN_DATA / SHIPMENTDO_DATA (ข้อมูลแผนจัดส่ง):
 \`\`\`json
 ${JSON.stringify(liveDbData.planData, null, 2)}
 \`\`\`
-
-- ตาราง WMS.HIT_TRANSFER_DATA_LOG_FTP (ประวัติการส่งไฟล์ SFTP):
-${liveDbData.logFtp.length > 0 
-  ? '```json\n' + JSON.stringify(liveDbData.logFtp, null, 2) + '\n```' 
-  : '(ไม่พบประวัติใน LOG_FTP แปลว่ายังไม่เคยส่ง หรือยังไม่เคยถูกบันทึกส่งสำเร็จ)'}
-
-- ตาราง WMS.HIT_SHIP_TO_MASTER (Prefix Master):
-\`\`\`json
-${JSON.stringify(liveDbData.prefixMaster, null, 2)}
-\`\`\`
-${crossCheckInfo}
 `;
   }
+
+  const { schemaContent, rulesContent } = loadFcaRulesAndSchema();
+
+  const apiQueryInstructions = useApiQuery ? `
+[TOOL CAPABILITY: USE API QUERY IS ACTIVATED]:
+ผู้ใช้เปิดฟีเจอร์ "Use API Query" ซึ่งอนุญาตให้คุณเรียกใช้งาน API ตัวกลางเพื่อ Query ข้อมูลจริงสดๆ จากฐานข้อมูล (${currentConnectionName}) มาใช้ในการตอบคำถามได้
+หากคุณต้องการดึงข้อมูลจากตารางใดๆ เพิ่มเติมเพื่อตอบคำถาม ให้ตอบกลับเฉพาะบล็อกคำสั่ง JSON ดังนี้:
+<<<EXECUTE_QUERY
+{
+  "db": "wms",
+  "table": "HIT_SHIP_CONFIRM",
+  "sql": "SELECT ... FROM WMS.HIT_SHIP_CONFIRM WHERE ... LIMIT 20"
+}
+>>>
+ระบบตัวกลางจะไปรันคำสั่ง SQL จริงบน ${currentConnectionName} แล้วส่งผลลัพธ์ข้อมูลกลับมาให้คุณสรุปวิเคราะห์เป็นคำตอบจริงทันที
+` : `
+[MODE: RAW SQL ONLY (Use API Query is OFF)]:
+ผู้ใช้ปิดโหมด Use API Query: หากคุณต้องการแนะนำคำสั่ง SQL ให้แสดงเฉพาะคำสั่ง RAW SQL ใน Markdown code block (\`\`\`sql ... \`\`\`) เพื่อให้ผู้ใช้นำไปเปิดดูเอง ห้ามส่งบล็อก <<<EXECUTE_QUERY>>>
+`;
 
   return `You are Belton AI, an expert enterprise AI diagnostic and troubleshooting assistant for Belton Technology's WMS Ship Confirm pipeline (FTP to Western Digital / Hitachi customer integration).
 You query and verify data directly from the active database connection.
@@ -278,15 +370,20 @@ ${allStepsSummary || 'ไม่ได้ระบุ'}
 - Audit Summary (QTY Plan vs Pack):
 ${audit ? JSON.stringify(audit, null, 2) : 'ไม่ได้ระบุ'}
 ${liveDbPromptSection}
+${rulesContent ? `\n[FCA BUSINESS RULES & SYSTEM INSTRUCTIONS]:\n${rulesContent}\n` : ''}
+${schemaContent ? `\n[FCA DATABASE SCHEMA & DATA DICTIONARY]:\n${schemaContent}\n` : ''}
+${apiQueryInstructions}
 [CRITICAL INSTRUCTIONS FOR AI]:
 1. **ระบุ Connection เสมอ:**
    - ในการตอบคำถาม ให้ระบุอย่างชัดเจนว่ากำลังตรวจสอบข้อมูลจากฐานข้อมูล Connection ใด เช่น \`📊 ฐานข้อมูลที่ตรวจสอบ: ${currentConnectionName}\`
 2. **ใช้ข้อมูลจริงจากส่วน [GROUND TRUTH: ข้อมูลจริงสดจากฐานข้อมูล Database] ตอบคำถาม:**
    - เมื่อผู้ใช้ถามเรื่อง **วันที่ส่งสินค้า (Ship Date / Date)**, ยอดรวม QTY, หมายเลขพาเลท, สถานะ PACK, หรือประวัติการส่ง ให้ดูจากตารางจริงที่ดึงสดมาด้านบนและตอบผู้ใช้โดยตรงเป็นข้อมูลจริงทันที
-   - หากในตาราง \`HIT_SHIP_CONFIRM\` มีข้อมูล \`date\` (เช่น \`2026-08-20 08:12:04\`) หรือตาราง \`SHIPMENTPLAN_DATA\` มี \`ship_date\` ให้บอกวันที่และเวลาดังกล่าวแก่ผู้ใช้ทันที
+   - หากในตาราง \`HIT_SHIP_CONFIRM\` มีข้อมูล \`date\` (เช่น \`2026-08-20 08:12:04\`) หรือตาราง \`SHIPMENTPLAN_DATA\` มี \`qty\` ให้บอกข้อมูลดังกล่าวแก่ผู้ใช้ทันที
    - หากผู้ใช้เลือก Development แต่ข้อมูลอยู่ใน Production (หรือกลับกัน) ให้แจ้งเตือนผู้ใช้ว่าพบข้อมูลในอีก Connection หนึ่ง และแนะนำให้สลับ DB Mode
-3. ตอบเป็นภาษาไทยอย่างสุภาพ กระชับ ชัดเจน และตรงประเด็น
-4. เมื่อให้คำสั่ง SQL สำหรับตรวจสอบหรือแก้ไขข้อมูล ให้ใส่ใน Markdown code block (\`\`\`sql ... \`\`\`) เสมอ`;
+3. **ยึด Schema ตาม [FCA DATABASE SCHEMA & DATA DICTIONARY] เสมอ:**
+   - ห้ามแต่งชื่อ Column ในคำสั่ง SQL ต้องใช้เฉพาะ Column ที่มีอยู่จริงในเอกสาร Schema
+4. ตอบเป็นภาษาไทยอย่างสุภาพ กระชับ ชัดเจน และตรงประเด็น
+5. เมื่อให้คำสั่ง SQL สำหรับตรวจสอบหรือแก้ไขข้อมูล ให้ใส่ใน Markdown code block (\`\`\`sql ... \`\`\`) เสมอ`;
 };
 
 /**
@@ -393,12 +490,15 @@ router.post('/openclaw/chat', async (req, res) => {
       liveDbData = await fetchLiveDoContext(targetDo, env);
     }
 
+    const useApiQuery = Boolean(req.body.useApiQuery || context.useApiQuery);
+
     const { cookieHeader, authHeader } = formatCookieAndAuth(authCookie);
     const systemPrompt = buildChatSystemPrompt({
       ...context,
       doNumber: targetDo,
       env,
-      liveDbData
+      liveDbData,
+      useApiQuery
     });
 
     // Build the messages payload with system context prompt prepended + Multimodal Image Support
@@ -482,6 +582,86 @@ router.post('/openclaw/chat', async (req, res) => {
       aiResponseText = typeof resData === 'string' ? resData : JSON.stringify(resData, null, 2);
     }
 
+    // 🚀 Handle Use API Query Tool Execution Loop (If activated and AI requested query)
+    const executedQueries = [];
+    if (useApiQuery) {
+      const queryBlockRegex = /(?:<<<EXECUTE_QUERY|<<<QUERY)([\s\S]*?)>>>/gi;
+      let match;
+      const parsedQueries = [];
+
+      while ((match = queryBlockRegex.exec(aiResponseText)) !== null) {
+        const rawQueryJson = match[1].trim();
+        try {
+          const parsed = JSON.parse(rawQueryJson);
+          if (parsed && parsed.sql) parsedQueries.push(parsed);
+        } catch (pe) {
+          const sqlMatch = rawQueryJson.match(/"sql"\s*:\s*"([\s\S]*?)"/) || rawQueryJson.match(/SELECT[\s\S]*/i);
+          if (sqlMatch) {
+            parsedQueries.push({ sql: sqlMatch[1] || sqlMatch[0], db: 'wms' });
+          }
+        }
+      }
+
+      if (parsedQueries.length > 0) {
+        try {
+          const queryResults = await Promise.all(
+            parsedQueries.map(q => executeIntermediateQuery({
+              env,
+              db: q.db || 'wms',
+              table: q.table,
+              sql: q.sql
+            }))
+          );
+          executedQueries.push(...queryResults);
+
+          const currentConnectionName = env === 'development' ? 'Development (BITINTRADEV)' : 'Production (BITINTRA_REAL)';
+
+          // Build lightweight text-only messages for Turn 2
+          const turn2Messages = [
+            { 
+              role: 'system', 
+              content: `You are Belton AI. The intermediate query API has executed the requested SQL queries on the active database connection (${currentConnectionName}). Synthesize a clear, detailed, polite Thai answer for the user based strictly on the query results below. Do NOT output <<<EXECUTE_QUERY>>> blocks again.` 
+            },
+            { 
+              role: 'user', 
+              content: `[คำถามเดิมของผู้ใช้]:\n${lastUserMessage}\n\n[ผลลัพธ์ที่ดึงได้จากฐานข้อมูลจริงผ่าน API ตัวกลาง (${currentConnectionName})]:\n` + 
+                queryResults.map((qr, i) => `--- Query ${i+1} (${qr.connectionName} | DB: ${qr.db}) ---\nSQL: ${qr.sql}\nผลลัพธ์: ${qr.success ? `พบ ${qr.count} แถว (${qr.durationMs}ms)` : `ข้อผิดพลาด: ${qr.error}`}\nข้อมูลแถว:\n${JSON.stringify(qr.rows || [], null, 2)}`).join('\n\n') +
+                `\n\nกรุณาสรุปและวิเคราะห์ผลลัพธ์ข้อมูลจริงข้างต้นเพื่อตอบคำถามของผู้ใช้เป็นภาษาไทยอย่างละเอียด ชัดเจน และตรงประเด็น`
+            }
+          ];
+
+          const respTurn2 = await axios.post(targetUrl, {
+            model: model || 'openclaw',
+            messages: turn2Messages
+          }, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Cookie': cookieHeader,
+              'Authorization': authHeader
+            },
+            timeout: 45000,
+            validateStatus: status => status >= 200 && status < 400
+          });
+
+          const resData2 = respTurn2.data;
+          if (resData2.choices && resData2.choices.length > 0) {
+            aiResponseText = resData2.choices[0].message?.content || resData2.choices[0].text || '';
+          } else if (resData2.response) {
+            aiResponseText = resData2.response;
+          } else if (resData2.content) {
+            aiResponseText = resData2.content;
+          }
+        } catch (toolErr) {
+          console.error('[OpenClaw] Tool execution error:', toolErr.message);
+          // Graceful fallback: Cleanly format query results without broken code blocks
+          aiResponseText = `📊 **ผลการดึงข้อมูลสดจากฐานข้อมูลผ่าน API ตัวกลาง:**\n\n` +
+            executedQueries.map((qr, i) => `**คำสั่งที่ ${i+1}:** (${qr.connectionName} | DB: \`${qr.db}\`)\n` +
+              (qr.success ? `✓ พบข้อมูล **${qr.count}** แถว (${qr.durationMs}ms):\n\`\`\`json\n${JSON.stringify(qr.rows, null, 2)}\n\`\`\`` : `❌ เกิดข้อผิดพลาด: ${qr.error}`)
+            ).join('\n\n');
+        }
+      }
+    }
+
     return res.json({
       status: 200,
       success: true,
@@ -491,7 +671,9 @@ router.post('/openclaw/chat', async (req, res) => {
         timestamp: new Date().toISOString(),
         model: model || 'openclaw',
         connectionUsed: liveDbData ? liveDbData.connectionName : env,
-        liveDbFetched: !!liveDbData
+        liveDbFetched: !!liveDbData,
+        useApiQuery: useApiQuery,
+        executedQueries: executedQueries
       }
     });
 
@@ -506,6 +688,26 @@ router.post('/openclaw/chat', async (req, res) => {
       details: err.response?.data || null,
       hint: statusCode === 401 ? 'Cookie _openclaw_auth อาจหมดอายุ กรุณากดปุ่ม ⚙️ เพื่อวาง Cookie ใหม่' : undefined
     });
+  }
+});
+
+/**
+ * POST /api/openclaw/execute-query
+ * Intermediate API endpoint for running safe read-only SQL queries
+ * Accepts: { env, db, table, sql }
+ */
+router.post('/openclaw/execute-query', async (req, res) => {
+  try {
+    const { env = 'production', db = 'wms', table, sql } = req.body;
+    const result = await executeIntermediateQuery({ env, db, table, sql });
+    
+    if (!result.success) {
+      return res.status(400).json({ status: 400, ...result });
+    }
+    return res.json({ status: 200, ...result });
+  } catch (err) {
+    console.error('Execute Query API Endpoint Error:', err.message);
+    return res.status(500).json({ status: 500, error: err.message });
   }
 });
 
