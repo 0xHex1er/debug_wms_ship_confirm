@@ -1,0 +1,32 @@
+{
+  "name": "smart_warehouse",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "pm2 start ecosystem.config.js --name debug_ship_confirm_9999 --env local",
+    "dev": "sudo pm2 start ecosystem.config.js --name debug_ship_confirm_9999 --env development && sudo pm2 save",
+    "prod": "pm2 start ecosystem.config.js --name debug_ship_confirm_9999 && pm2 save",
+    "npm": "npm install --no-engine-strict --legacy-peer-deps"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "body-parser": "^1.20.3",
+    "bootstrap-icons": "^1.11.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "10.0.0",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1",
+    "mssql": "7.3.0",
+    "mysql2": "2.3.3",
+    "nodemon": "^3.1.9",
+    "oracledb": "^6.10.0",
+    "xlsx": "^0.18.5"
+  }
+}

@@ -1,0 +1,102 @@
+<title>Debug Shipment Comfirm</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/png" href="../../public/img/favicon.png">
+<link rel="shortcut icon" href="../../public/favicon.ico">
+
+<!-- Google Fonts: Inter & Outfit -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<!-- Bootstrap CSS (for DataTable pages only) -->
+<link rel="stylesheet" href="../../public/css/bootstrap.min.css">
+
+<!-- Tailwind CSS CDN -->
+<script src="../../public/js/tailwind_3.4.17.js"></script>
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: {
+                    sans: ['Inter', 'Outfit', 'sans-serif'],
+                    display: ['Outfit', 'sans-serif']
+                },
+                colors: {
+                    'primary-red': '#e11d48',
+                    'dark-red': '#be123c',
+                    'ruby': {
+                        50: '#fff1f2',
+                        100: '#ffe4e6',
+                        200: '#fecdd3',
+                        300: '#fda4af',
+                        400: '#fb7185',
+                        500: '#f43f5e',
+                        600: '#e11d48',
+                        700: '#be123c',
+                        800: '#9f1239',
+                        900: '#881337',
+                        950: '#4c0519'
+                    },
+                    'obsidian': {
+                        900: '#0b0f19',
+                        950: '#060911'
+                    }
+                }
+            }
+        },
+        corePlugins: {
+            preflight: false, // Disable Tailwind's reset to avoid conflict with Bootstrap
+        }
+    }
+</script>
+
+<!-- Icons -->
+<link rel="stylesheet" href="../../public/bootstrap-icons-1.11.3/font/bootstrap-icons.min.css">
+
+<!-- DataTables & Plugins -->
+<link rel="stylesheet" href="../../public/css/datatables.min.css">
+<link rel="stylesheet" href="../../public/css/rowReorder.dataTables.min.css">
+<link rel="stylesheet" href="../../public/css/sweetalert2.min.css">
+<link rel="stylesheet" href="../../public/css/daterangepicker.css">
+<link rel="stylesheet" href="../../public/css/select2.min.css" rel="stylesheet" />
+
+<style>
+    /* Custom select2 style per user memory requirement */
+    .select2-container--default .select2-results__option[aria-selected=true] {
+        background-color: #34495e;
+    }
+</style>
+
+<!-- Theme System Initializer (Zero flicker) -->
+<script>
+    (function() {
+        const savedTheme = localStorage.getItem('app_theme') || 'obsidian';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+</script>
+
+<!-- Custom Styles -->
+<link rel="stylesheet" href="../../public/css/main_menu.css">
+<link rel="stylesheet" href="../../public/css/global_style.css">
+<link rel="stylesheet" href="../../public/css/theme-system.css">
+
+<script src="../../public/js/jquery-3.7.1.min.js"></script>
+<script src="../../public/js/bootstrap.min.js"></script>
+
+<script src="../../public/js/sweetalert2.all.min.js"></script>
+<script src="../../public/js/axios.min.js"></script>
+<script src="../../public/js/datatables.min.js"></script>
+<script src="../../public/js/dataTables.rowReorder.min.js"></script>
+<script src="../../public/js/vue.js"></script>
+<script src="../../public/js/accounting.js"></script>
+<script src="../../public/js/vue-numeric.min.js"></script>
+<script src="../../public/js/moment.js"></script>
+<script src="../../public/js/daterangepicker.min.js"></script>
+<script src="../../public/js/select2.min.js"></script>
+<script src="../../public/js/global_fn.js"></script>
+<script src="../../public/js/store.js"></script>
+<script src="../../public/js/utils.js"></script>
+
+<script src="../../public/js/col.js"></script>
+<script src="../../public/js/BrowserPrint-3.1.250.min.js"></script>
+<script src="../../public/js/BrowserPrint-Zebra-1.1.250.min.js"></script>

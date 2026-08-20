@@ -1,0 +1,215 @@
+/* ==========================================================================
+   HIGH-CONTRAST THEME SYSTEM: Dark Mode (Obsidian) & Light Mode (Executive)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. HIGH-CONTRAST DARK MODE (Default / Matches Main Menu)
+   -------------------------------------------------------------------------- */
+[data-theme="dark"],
+html:not([data-theme="light"]) body,
+[data-theme="dark"] body {
+    background-color: #080d1a !important;
+    color: #f8fafc !important;
+}
+
+/* Primary Card Surfaces - Distinct & High Contrast */
+[data-theme="dark"] .bg-white,
+[data-theme="dark"] .bg-slate-50,
+[data-theme="dark"] .bg-slate-50\/70,
+[data-theme="dark"] .bg-slate-50\/60 {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+/* High Contrast Borders */
+[data-theme="dark"] .border-slate-200,
+[data-theme="dark"] .border-slate-150,
+[data-theme="dark"] .border-slate-100,
+[data-theme="dark"] .border-slate-300 {
+    border-color: #334155 !important;
+}
+
+/* High Contrast Typography - Crystal Clear Readability */
+[data-theme="dark"] .text-slate-900,
+[data-theme="dark"] .text-slate-800,
+[data-theme="dark"] .text-slate-700 {
+    color: #ffffff !important;
+    font-weight: 600;
+}
+
+[data-theme="dark"] .text-slate-600,
+[data-theme="dark"] .text-slate-550,
+[data-theme="dark"] .text-slate-500 {
+    color: #cbd5e1 !important; /* Bright slate for excellent contrast */
+}
+
+[data-theme="dark"] .text-slate-400 {
+    color: #94a3b8 !important;
+}
+
+/* Input Fields & Selects */
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] select {
+    background-color: #030712 !important;
+    border-color: #475569 !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
+
+/* Nested Sub-Containers & Tables */
+[data-theme="dark"] .bg-slate-100,
+[data-theme="dark"] .bg-slate-100\/80 {
+    background-color: #050a14 !important;
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .bg-indigo-50,
+[data-theme="dark"] .bg-indigo-50\/70,
+[data-theme="dark"] .bg-indigo-50\/40 {
+    background-color: #1e1b4b !important;
+    border-color: #4f46e5 !important;
+    color: #c7d2fe !important;
+}
+
+[data-theme="dark"] .bg-emerald-50 {
+    background-color: #064e3b !important;
+    border-color: #059669 !important;
+    color: #a7f3d0 !important;
+}
+
+[data-theme="dark"] .bg-amber-50 {
+    background-color: #78350f !important;
+    border-color: #d97706 !important;
+    color: #fde68a !important;
+}
+
+[data-theme="dark"] .bg-rose-50 {
+    background-color: #4c0519 !important;
+    border-color: #e11d48 !important;
+    color: #fecdd3 !important;
+}
+
+[data-theme="dark"] .bg-purple-50,
+[data-theme="dark"] .bg-purple-100 {
+    background-color: #3b0764 !important;
+    border-color: #a855f7 !important;
+    color: #f3e8ff !important;
+}
+
+/* Flowchart Canvas in Dark Mode */
+[data-theme="dark"] .vue2-flow-canvas,
+[data-theme="dark"] .v-flow {
+    background-color: #070c18 !important;
+}
+
+[data-theme="dark"] .vue2-flow-grid {
+    opacity: 0.25 !important;
+}
+
+/* Flow Nodes in Dark Mode */
+[data-theme="dark"] .v-flow .rounded-xl.border.bg-white {
+    background-color: #131d31 !important;
+    border-color: #3b4861 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 15px -1px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="dark"] .v-flow .rounded-xl.border.bg-white:hover {
+    border-color: #38bdf8 !important;
+}
+
+/* Node Title in Dark Mode */
+[data-theme="dark"] .v-flow .text-slate-800 {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+/* Node Table Name in Dark Mode (Vivid Bright Cyan) */
+[data-theme="dark"] .v-flow .text-slate-400.font-mono,
+[data-theme="dark"] .v-flow .text-slate-400 {
+    color: #38bdf8 !important;
+    font-weight: 600 !important;
+}
+
+/* Node Bottom Bar */
+[data-theme="dark"] .v-flow .bg-slate-50 {
+    background-color: #090f1d !important;
+    border-color: #243048 !important;
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .v-flow .bg-slate-50 .text-slate-500 {
+    color: #a5f3fc !important;
+    font-weight: 600 !important;
+}
+
+/* Custom Scrollbar in Dark Mode */
+[data-theme="dark"] .custom-scrollbar::-webkit-scrollbar-track {
+    background: #090d16 !important;
+}
+[data-theme="dark"] .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #334155 !important;
+}
+[data-theme="dark"] .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #475569 !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. HIGH-CONTRAST LIGHT MODE (Executive White)
+   -------------------------------------------------------------------------- */
+[data-theme="light"],
+[data-theme="light"] body {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .bg-white {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .border-slate-200,
+[data-theme="light"] .border-slate-300 {
+    border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] .text-slate-900,
+[data-theme="light"] .text-slate-800 {
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .text-slate-600,
+[data-theme="light"] .text-slate-500 {
+    color: #334155 !important;
+}
+
+[data-theme="light"] input[type="date"],
+[data-theme="light"] input[type="text"],
+[data-theme="light"] select {
+    background-color: #ffffff !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .vue2-flow-canvas,
+[data-theme="light"] .v-flow {
+    background-color: #f8fafc !important;
+}
+
+[data-theme="light"] .v-flow .rounded-xl.border.bg-white {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .v-flow .text-slate-400.font-mono {
+    color: #0284c7 !important;
+    font-weight: 600 !important;
+}

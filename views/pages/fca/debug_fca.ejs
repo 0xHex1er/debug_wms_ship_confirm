@@ -1,0 +1,2307 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <%- include('../../partials/script') %>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased font-sans">
+    <%- include('../../partials/header') %>
+
+    <div id="vue-app" class="w-full px-4 sm:px-6 lg:px-8 py-5 pb-28" v-cloak>
+        
+        <!-- Header Section -->
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 pb-4 border-b border-slate-200">
+            <div>
+                <div class="flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xl shadow-md">
+                        ⚡
+                    </span>
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                            FCA (Flex) Shipment Flow Debugger
+                            <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-0.5 rounded-full border border-emerald-300">
+                                Vue2-flow
+                            </span>
+                        </h1>
+                        <p class="text-slate-550 text-xs mt-0.5">
+                            เครื่องมือตรวจสอบ Data Flow และความถูกต้องของการส่งข้อมูล Flex Shipment (Z0005/S0005) ไปยัง WDC SFTP
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Navigation Links -->
+            <div class="flex items-center flex-wrap gap-2 text-xs">
+                <!-- Global Connection Mode Switcher -->
+                <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-300 shadow-sm">
+                    <span class="px-2 text-slate-500 text-[11px] font-bold hidden sm:inline">DB Mode:</span>
+                    <button 
+                        @click="setGlobalEnv('production')" 
+                        :class="['px-3 py-1.5 rounded-lg transition text-xs font-bold flex items-center gap-1.5', globalEnv === 'production' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900']"
+                        title="สลับทุก Step เป็น Production Database"
+                    >
+                        <span class="w-2 h-2 rounded-full bg-emerald-300"></span> Production
+                    </button>
+                    <button 
+                        @click="setGlobalEnv('development')" 
+                        :class="['px-3 py-1.5 rounded-lg transition text-xs font-bold flex items-center gap-1.5', globalEnv === 'development' ? 'bg-amber-500 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900']"
+                        title="สลับทุก Step เป็น Development Database"
+                    >
+                        <span class="w-2 h-2 rounded-full bg-amber-200"></span> Development
+                    </button>
+                </div>
+
+                <button 
+                    @click="showAllTroubleshootingModal = true" 
+                    title="เปิดดูคู่มือสรุปจุดเสี่ยงและวิธีแก้ข้อมูลให้ผ่านครบทั้ง 10 Steps"
+                    class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-3 py-2 rounded-lg border border-indigo-200 shadow-xs transition flex items-center gap-1.5 text-xs"
+                >
+                    <span>🛠️</span> คู่มือแก้ Error (10 Steps)
+                </button>
+
+                <a href="/debug-fca-advanced" class="bg-white hover:bg-slate-100 text-slate-700 font-medium px-3 py-2 rounded-lg border border-slate-300 shadow-sm transition flex items-center gap-1.5">
+                    <span>📊</span> โหมด Batch Analysis
+                </a>
+                <a href="/fca-flow" class="bg-white hover:bg-slate-100 text-slate-700 font-medium px-3 py-2 rounded-lg border border-slate-300 shadow-sm transition flex items-center gap-1.5">
+                    <span>📖</span> เอกสารโครงสร้าง Flow
+                </a>
+                <a href="/main_menu" class="bg-slate-800 hover:bg-slate-900 text-white font-medium px-3.5 py-2 rounded-lg shadow-sm transition flex items-center gap-1.5">
+                    ← เมนูหลัก
+                </a>
+            </div>
+        </div>
+
+        <!-- Top Control Bar -->
+        <div class="bg-white p-4 lg:p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                <!-- Date Picker -->
+                <div class="md:col-span-3">
+                    <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+                        <span>📅</span> วันที่ยืนยันจัดส่ง (Ship Date)
+                    </label>
+                    <input 
+                        type="date" 
+                        v-model="selectedDate" 
+                        class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+                    />
+                </div>
+
+                <!-- Sent Filter Checkbox -->
+                <div class="md:col-span-3 flex items-center pt-2 md:pt-4">
+                    <label class="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-700 font-medium bg-slate-50 px-3 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 w-full transition">
+                        <input 
+                            type="checkbox" 
+                            v-model="excludeSentDOs" 
+                            class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 border-slate-300"
+                        />
+                        <span>กรอง DO ที่ส่งแล้วออก (Exclude Sent)</span>
+                    </label>
+                </div>
+
+                <!-- Fetch DOs Button -->
+                <div class="md:col-span-2 pt-2 md:pt-4">
+                    <button 
+                        @click="fetchDOs" 
+                        :disabled="loadingDos" 
+                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        <span v-if="!loadingDos">🔍 ค้นหา DO</span>
+                        <span v-else class="flex items-center gap-1.5">
+                            <span class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
+                            กำลังโหลด...
+                        </span>
+                    </button>
+                </div>
+
+                <!-- Run Diagnose Button -->
+                <div class="md:col-span-4 pt-2 md:pt-4 flex gap-2">
+                    <button 
+                        @click="runDiagnose" 
+                        :disabled="!selectedDO || isDiagnosing" 
+                        class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition shadow-md disabled:opacity-40 flex items-center justify-center gap-2"
+                    >
+                        <span v-if="!isDiagnosing">⚡ วิเคราะห์ Flow (DO นี้)</span>
+                        <span v-else class="flex items-center gap-2">
+                            <span class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
+                            กำลังวิเคราะห์แต่ละ Step...
+                        </span>
+                    </button>
+
+                    <button 
+                        @click="toggleStepThrough" 
+                        :disabled="!selectedDO || (isDiagnosing && !isSteppingThrough)" 
+                        :title="isSteppingThrough ? 'คลิกเพื่อหยุดการจำลอง' : 'จำลองการรันทีละ Step พร้อม Animation'" 
+                        :class="[
+                            'px-3.5 py-2.5 rounded-xl text-xs font-bold transition shrink-0 flex items-center gap-1.5 shadow-sm border select-none',
+                            isSteppingThrough 
+                                ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-300 animate-pulse' 
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                        ]"
+                    >
+                        <span>{{ isSteppingThrough ? '⏹️ หยุด' : '▶ ทีละก้าว' }}</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- DO Chips List -->
+            <div class="mt-4 pt-4 border-t border-slate-100">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                    <span class="text-xs font-bold text-slate-600 flex items-center gap-1.5">
+                        <span>📋</span> รายการ DO ที่พบในระบบ ({{ doList.length }} รายการ):
+                    </span>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span v-if="selectedDO" class="text-xs text-emerald-600 font-semibold">
+                            เลือก: <span class="font-mono bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">{{ selectedDO.do }}</span>
+                            ({{ selectedDO.ship_to_location || 'Hub' }})
+                        </span>
+                        
+                        <!-- Clone to Development Button (ONLY AVAILABLE WHEN IN PRODUCTION) -->
+                        <button 
+                            v-if="selectedDO && globalEnv === 'production'"
+                            @click="openCloneModal"
+                            :disabled="isCloning"
+                            title="แสดงผังจำลองและคัดลอกข้อมูล DO นี้จาก Production ไปยัง Development (BITINTRADEV)"
+                            class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs disabled:opacity-50 flex items-center gap-1.5 cursor-pointer select-none"
+                        >
+                            <span>📦</span>
+                            <span>Clone Data to Development</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="loadingDos" class="py-4 text-center text-xs text-slate-400">
+                    กำลังดึงข้อมูล DO จากฐานข้อมูล...
+                </div>
+                <div v-else-if="doList.length === 0" class="py-3 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                    ไม่พบ DO ในวันที่เลือก กรุณากดค้นหาหรือเลือกวันที่อื่น
+                </div>
+                <div v-else class="flex flex-wrap gap-2 max-h-24 overflow-y-auto custom-scrollbar p-1">
+                    <button
+                        v-for="item in doList"
+                        :key="item.do"
+                        @click="selectDO(item)"
+                        :class="[
+                            'px-3 py-1.5 rounded-xl text-xs font-mono font-medium transition flex items-center gap-2 border',
+                            selectedDO && selectedDO.do === item.do
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ]"
+                    >
+                        <span>{{ item.do }}</span>
+                        <span 
+                            :class="[
+                                'text-[10px] px-1.5 py-0.2 rounded font-sans',
+                                selectedDO && selectedDO.do === item.do
+                                    ? 'bg-emerald-700 text-white'
+                                    : (item.is_sent ? 'bg-slate-200 text-slate-600' : 'bg-emerald-100 text-emerald-800')
+                            ]"
+                        >
+                            {{ item.is_sent ? 'ส่งแล้ว' : item.ship_to_location }}
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Flow Viewport Section (Vue2-flow Canvas + Inspector) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+            
+            <!-- Left 8 Cols: Vue2-flow Interactive Canvas -->
+            <div class="lg:col-span-8 flex flex-col">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex-grow flex flex-col">
+                    <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-150">
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                                <span>🗺️</span> FCA Interactive Execution Flow
+                            </h2>
+                            <span class="text-[11px] text-slate-500 hidden sm:inline">(คลิกที่โหนดเพื่อดู RAW SQL & ข้อมูลตาราง)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button @click="resetFlowPositions" title="จัดตำแหน่งเริ่มต้น" class="text-xs text-slate-500 hover:text-slate-800 font-medium px-2 py-1 bg-slate-100 rounded-lg hover:bg-slate-200 transition">
+                                ↺ จัดผังใหม่
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- The Vue2-flow Component Canvas -->
+                    <div class="relative w-full h-[580px] flex-grow rounded-xl overflow-hidden">
+                        <v-flow 
+                            ref="vflow"
+                            :nodes="flowNodes" 
+                            :conns="flowConns"
+                            :selected-node-id="selectedNodeId"
+                            :grid="true"
+                            :zoomable="true"
+                            :pannable="true"
+                            :draggable="true"
+                            @node-click="onNodeClick"
+                            @pane-click="onPaneClick"
+                        >
+                            <!-- Custom Node Slot Template -->
+                            <template slot="node" slot-scope="{ node, selected }">
+                                <div 
+                                    :class="[
+                                        'rounded-xl border p-3 bg-white shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between cursor-pointer select-none',
+                                        getNodeBorderClass(node, selected)
+                                    ]"
+                                    :style="{ width: (node.width || 250) + 'px', minHeight: (node.height || 105) + 'px' }"
+                                >
+                                    <!-- Node Header -->
+                                    <div class="flex items-start justify-between gap-1.5 mb-1.5">
+                                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                                            <div 
+                                                class="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 shadow-xs"
+                                                :style="{ backgroundColor: node.iconBg || '#f1f5f9', color: node.iconColor || '#334155' }"
+                                            >
+                                                {{ node.icon || '📌' }}
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <div class="flex items-center gap-1.5 flex-wrap">
+                                                    <span class="text-xs font-bold text-slate-800 leading-tight">
+                                                        {{ node.name }}
+                                                    </span>
+                                                    <span 
+                                                        v-if="node.isCustom" 
+                                                        title="ขั้นตอนนี้ถูกเพิ่มเติมนอกเหนือจาก Flow ปกติของ Source Code"
+                                                        class="text-[8px] font-extrabold px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-700 border border-purple-300 shadow-2xs font-mono tracking-tight shrink-0 flex items-center gap-0.5"
+                                                    >
+                                                        <span>✨</span>CUSTOM
+                                                    </span>
+                                                </div>
+                                                <div class="text-[10px] text-slate-400 truncate mt-0.5 font-mono">
+                                                    {{ node.tableName }}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Top Right: Connection Toggle Button & Status Badge -->
+                                        <div class="flex items-center gap-1 shrink-0">
+                                            <!-- Per-block Connection Switcher -->
+                                            <button 
+                                                @click.stop="toggleNodeEnv(node)" 
+                                                :title="'สลับ Connection: ' + (node.env === 'development' ? 'Development (คลิกเพื่อเปลี่ยนเป็น Prod)' : 'Production (คลิกเพื่อเปลี่ยนเป็น Dev)')"
+                                                :class="[
+                                                    'text-[8.5px] font-bold px-1.5 py-0.5 rounded border transition flex items-center gap-1 shrink-0',
+                                                    node.env === 'development' ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                                                ]"
+                                            >
+                                                <span :class="['w-1.5 h-1.5 rounded-full', node.env === 'development' ? 'bg-amber-500' : 'bg-emerald-500']"></span>
+                                                <span>{{ node.env === 'development' ? 'DEV' : 'PROD' }}</span>
+                                            </button>
+
+                                            <!-- Status Badge -->
+                                            <span 
+                                                :class="[
+                                                    'text-[9px] font-semibold px-2 py-0.5 rounded-full border shrink-0 flex items-center gap-1',
+                                                    getStatusBadge(node.status).class
+                                                ]"
+                                            >
+                                                <span>{{ getStatusBadge(node.status).icon }}</span>
+                                                <span>{{ getStatusBadge(node.status).text }}</span>
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Node Footer / Data Summary & Quick Run -->
+                                    <div class="text-[10px] text-slate-600 bg-slate-50 rounded-lg px-2 py-1 border border-slate-100 flex items-center justify-between mt-auto font-mono">
+                                        <span class="text-slate-500 truncate max-w-[120px]">{{ node.dataSummary || (node.dataCount !== undefined ? node.dataCount + ' รายการ' : 'คลิกดูข้อมูล') }}</span>
+                                        <div class="flex items-center gap-1">
+                                            <span v-if="node.timeMs" class="text-slate-400 text-[9px]">{{ node.timeMs }}ms</span>
+                                            <button 
+                                                @click.stop="runSingleStep(node)" 
+                                                :disabled="!selectedDO || runningStepNum === node.stepNum"
+                                                title="รันเฉพาะ Step นี้"
+                                                class="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100/60 px-1.5 py-0.5 rounded transition font-bold text-[9px] flex items-center gap-0.5 border border-indigo-200 bg-white shadow-2xs"
+                                            >
+                                                <span v-if="runningStepNum === node.stepNum" class="animate-spin w-2 h-2 border border-indigo-600 border-t-transparent rounded-full"></span>
+                                                <span v-else>▶</span>
+                                                <span>รัน</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </v-flow>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right 4 Cols: Step Inspector Drawer Panel -->
+            <div class="lg:col-span-4 flex flex-col">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 lg:p-5 flex-grow flex flex-col max-h-[650px] overflow-y-auto custom-scrollbar">
+                    
+                    <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-150">
+                        <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <span>🔍</span> Step Inspector (รายละเอียด)
+                        </h2>
+                        <span v-if="activeStep" class="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
+                            Step {{ activeStep.stepNum }}
+                        </span>
+                    </div>
+
+                    <!-- When a step is selected -->
+                    <div v-if="activeStep" class="space-y-4 text-xs">
+                        
+                        <!-- Step Title & Status -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1 gap-2">
+                                <div class="flex items-center gap-2 flex-wrap min-w-0">
+                                    <span class="font-bold text-slate-800 text-sm">{{ activeStep.name }}</span>
+                                    <span 
+                                        v-if="activeStep.isCustom" 
+                                        class="text-[9px] font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 border border-purple-300 flex items-center gap-1 shadow-2xs"
+                                    >
+                                        <span>✨</span> CUSTOM (เพิ่มเติมนอกเหนือจาก Flow ปกติ)
+                                    </span>
+                                </div>
+                                <span 
+                                    :class="[
+                                        'text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0',
+                                        getStatusBadge(activeStep.status).class
+                                    ]"
+                                >
+                                    {{ getStatusBadge(activeStep.status).icon }} {{ getStatusBadge(activeStep.status).text }}
+                                </span>
+                            </div>
+                            <p class="text-slate-500 text-[11px] leading-relaxed">{{ activeStep.description }}</p>
+                        </div>
+
+                        <!-- Manual Step Test Action Bar -->
+                        <div class="bg-indigo-50/70 p-3 rounded-xl border border-indigo-200/80 flex items-center justify-between gap-2 shadow-2xs">
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-700 block">Manual Step Test</span>
+                                <span class="font-semibold text-slate-800 text-xs">ทดสอบรันเฉพาะ Step {{ activeStep.stepNum }}</span>
+                            </div>
+                            <button 
+                                @click="runSingleStep(activeStep)" 
+                                :disabled="!selectedDO || runningStepNum === activeStep.stepNum" 
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-xs transition flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                                <span v-if="runningStepNum === activeStep.stepNum" class="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full"></span>
+                                <span v-else>▶</span>
+                                <span>{{ runningStepNum === activeStep.stepNum ? 'กำลังรัน...' : 'รันเฉพาะขั้นนี้' }}</span>
+                            </button>
+                        </div>
+
+                        <!-- Connection Switcher Box in Inspector -->
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Database Connection</span>
+                                <span class="font-bold text-slate-800 text-xs font-mono">
+                                    {{ activeStep.env === 'development' ? 'Development (BITINTRADEV)' : ((activeStep.stepNum === 5 || activeStep.stepNum === 6) ? 'Production (SGFCDB02)' : 'Production (BITINTRA)') }}
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-2xs">
+                                <button 
+                                    @click="setStepEnv(activeStep, 'production')"
+                                    :class="['px-2.5 py-1 rounded text-[10px] font-bold transition flex items-center gap-1', (activeStep.env || 'production') === 'production' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-slate-800']"
+                                >
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Prod
+                                </button>
+                                <button 
+                                    @click="setStepEnv(activeStep, 'development')"
+                                    :class="['px-2.5 py-1 rounded text-[10px] font-bold transition flex items-center gap-1', activeStep.env === 'development' ? 'bg-amber-500 text-white' : 'text-slate-500 hover:text-slate-800']"
+                                >
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-300"></span> Dev
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 text-[11px] text-slate-500 font-mono">
+                            <span class="bg-slate-100 px-2 py-0.5 rounded">DB: {{ activeStep.database }}</span>
+                            <span v-if="activeStep.timeMs" class="bg-slate-100 px-2 py-0.5 rounded">Time: {{ activeStep.timeMs }}ms</span>
+                        </div>
+
+                        <!-- Status Alert Box -->
+                        <div 
+                            v-if="activeStep.message"
+                            :class="[
+                                'p-3 rounded-xl border text-xs leading-relaxed',
+                                activeStep.status === 'success' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
+                                activeStep.status === 'error' ? 'bg-rose-50 text-rose-800 border-rose-200 font-medium' :
+                                activeStep.status === 'warning' ? 'bg-amber-50 text-amber-800 border-amber-200' :
+                                'bg-slate-50 text-slate-700 border-slate-200'
+                            ]"
+                        >
+                            {{ activeStep.message }}
+                        </div>
+
+                        <!-- RAW SQL Section -->
+                        <div v-if="activeStep.sql" class="mt-3">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="font-bold text-slate-700 flex items-center gap-1">
+                                    <span>⚙️</span> RAW SQL Query:
+                                </span>
+                                <button 
+                                    @click="copyText(activeStep.sql)"
+                                    class="bg-slate-800 hover:bg-slate-700 text-white text-[10px] px-2 py-0.5 rounded transition font-mono"
+                                >
+                                    คัดลอก SQL
+                                </button>
+                            </div>
+                            <pre class="bg-slate-900 text-emerald-400 p-3 rounded-xl font-mono text-[10.5px] overflow-x-auto whitespace-pre-wrap max-h-36 custom-scrollbar border border-slate-800 select-all">{{ activeStep.sql }}</pre>
+                        </div>
+
+                        <!-- Live Data Table / Preview -->
+                        <div class="mt-3">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="font-bold text-slate-700 flex items-center gap-1">
+                                    <span>📊</span> ข้อมูลที่ดึงได้ ({{ getStepDataRows(activeStep).length }} แถว):
+                                </span>
+                            </div>
+
+                            <div v-if="getStepDataRows(activeStep).length === 0" class="p-3 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-[11px]">
+                                ยังไม่มีข้อมูล (กดปุ่มวิเคราะห์เพื่อดึงข้อมูล)
+                            </div>
+                            <div v-else class="border border-slate-200 rounded-xl overflow-hidden max-h-48 overflow-y-auto custom-scrollbar">
+                                <table class="w-full text-left border-collapse text-[11px]">
+                                    <thead class="bg-slate-100 sticky top-0 border-b border-slate-200">
+                                        <tr>
+                                            <th v-for="key in getTableHeaders(getStepDataRows(activeStep))" :key="key" class="px-2.5 py-1.5 font-semibold text-slate-700">
+                                                {{ key }}
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 bg-white">
+                                        <tr v-for="(row, idx) in getStepDataRows(activeStep)" :key="idx" class="hover:bg-slate-50">
+                                            <td v-for="key in getTableHeaders(getStepDataRows(activeStep))" :key="key" class="px-2.5 py-1.5 font-mono text-slate-600 truncate max-w-[120px]">
+                                                {{ formatCellValue(row[key]) }}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Step Error Resolution & Troubleshooting Guide (หัวข้อวิธีแก้ไขเมื่อพบ Error) -->
+                        <div v-if="getStepTroubleshooting(activeStep.stepNum)" class="mt-4 pt-3 border-t border-slate-200">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-slate-800 flex items-center gap-1.5 text-xs text-indigo-950">
+                                    <span>🛠️</span> วิธีแก้ไขเมื่อพบ Error (Step {{ activeStep.stepNum }})
+                                </span>
+                                <button 
+                                    @click="showAllTroubleshootingModal = true" 
+                                    title="คลิกเพื่อเปิดดูสรุปจุดเสี่ยงและวิธีแก้ปัญหาครบทั้ง 10 Steps"
+                                    class="text-[10px] text-indigo-600 hover:text-indigo-800 hover:underline font-bold flex items-center gap-1 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-200"
+                                >
+                                    <span>📋</span> ดูสรุปทั้ง 10 Steps
+                                </button>
+                            </div>
+
+                            <div class="bg-gradient-to-br from-slate-50 to-indigo-50/40 p-3.5 rounded-xl border border-indigo-100/90 space-y-2.5 shadow-2xs">
+                                <!-- Target DB & Table -->
+                                <div class="flex items-start gap-2">
+                                    <span class="w-4 h-4 rounded bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">🎯</span>
+                                    <div class="min-w-0 flex-1">
+                                        <span class="text-[10.5px] font-bold text-slate-700 block">ตารางและฐานข้อมูลที่ต้องแก้ไข:</span>
+                                        <span class="text-[11px] font-mono text-indigo-700 bg-white px-1.5 py-0.5 rounded border border-indigo-200 inline-block mt-0.5 font-bold">
+                                            {{ getStepTroubleshooting(activeStep.stepNum).table }}
+                                        </span>
+                                        <span class="text-[10px] text-slate-500 ml-1 font-sans">({{ getStepTroubleshooting(activeStep.stepNum).db }})</span>
+                                    </div>
+                                </div>
+
+                                <!-- Risk / Script Impact -->
+                                <div class="flex items-start gap-2">
+                                    <span class="w-4 h-4 rounded bg-amber-100 text-amber-800 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">⚡</span>
+                                    <div class="min-w-0 flex-1">
+                                        <span class="text-[10.5px] font-bold text-slate-700 block">ผลกระทบต่อ Script:</span>
+                                        <span class="text-[10.5px] text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 block mt-0.5 font-sans leading-tight">
+                                            {{ getStepTroubleshooting(activeStep.stepNum).risk }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Error Causes -->
+                                <div class="flex items-start gap-2">
+                                    <span class="w-4 h-4 rounded bg-rose-100 text-rose-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">⚠️</span>
+                                    <div class="min-w-0 flex-1">
+                                        <span class="text-[10.5px] font-bold text-slate-700 block">สาเหตุที่ทำให้ Script ล้มเหลว (Root Causes):</span>
+                                        <ul class="list-disc list-inside text-[10.5px] text-slate-600 mt-0.5 space-y-0.5 leading-relaxed pl-1">
+                                            <li v-for="(cause, cIdx) in getStepTroubleshooting(activeStep.stepNum).causes" :key="cIdx">
+                                                {{ cause }}
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <!-- How to Fix -->
+                                <div class="flex items-start gap-2">
+                                    <span class="w-4 h-4 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">💡</span>
+                                    <div class="min-w-0 flex-1">
+                                        <span class="text-[10.5px] font-bold text-slate-700 block">ขั้นตอนการแก้ไขข้อมูลเพื่อให้ Step นี้ผ่าน:</span>
+                                        <ol class="list-decimal list-inside text-[10.5px] text-slate-700 mt-0.5 space-y-0.5 leading-relaxed font-medium pl-1">
+                                            <li v-for="(step, sIdx) in getStepTroubleshooting(activeStep.stepNum).fixSteps" :key="sIdx">
+                                                {{ step }}
+                                            </li>
+                                        </ol>
+                                    </div>
+                                </div>
+
+                                <!-- Owner Team -->
+                                <div class="flex items-center justify-between pt-2 border-t border-indigo-100 text-[10px]">
+                                    <span class="text-slate-500 font-medium">ฝ่าย/ทีมงานที่รับผิดชอบ:</span>
+                                    <span class="font-bold text-indigo-700 bg-white px-2 py-0.5 rounded border border-indigo-200">
+                                        👤 {{ getStepTroubleshooting(activeStep.stepNum).owner }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Empty state when no step is clicked -->
+                    <div v-else class="flex-grow flex flex-col items-center justify-center text-center p-6 text-slate-400">
+                        <span class="text-4xl mb-2">👆</span>
+                        <span class="text-xs font-semibold text-slate-600">คลิกที่โหนดใดๆ บน Flowchart</span>
+                        <span class="text-[11px] text-slate-400 mt-1">เพื่อเปิดดู RAW SQL Query, พารามิเตอร์ และผลลัพธ์ตารางสด</span>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bottom Section: Metric Summary Cards & CSV Generator Preview -->
+        <div class="space-y-6">
+            
+            <!-- Audit Metric Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                <!-- Card 1: WMS Confirm Plan QTY -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">1. WMS Plan QTY</span>
+                        <span class="text-2xl font-extrabold text-slate-800 font-mono mt-1 block">
+                            {{ (diagnosticsResult && diagnosticsResult.audit) ? formatNumber(diagnosticsResult.audit.totalConfirmQty) : '-' }}
+                        </span>
+                        <span class="text-[10px] text-slate-400">ยอดรวมตามแผนงาน WMS</span>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg">
+                        📦
+                    </div>
+                </div>
+
+                <!-- Card 2: Hitachi Scanned Pack QTY -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">2. Hitachi Pack QTY</span>
+                        <span class="text-2xl font-extrabold text-slate-800 font-mono mt-1 block">
+                            {{ (diagnosticsResult && diagnosticsResult.audit) ? formatNumber(diagnosticsResult.audit.totalPackQty) : '-' }}
+                        </span>
+                        <span class="text-[10px] text-slate-400">ยอดรวมสแกนสายผลิต</span>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-lg">
+                        🏷️
+                    </div>
+                </div>
+
+                <!-- Card 3: Matching Result -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">3. QTY Audit Match</span>
+                        <div class="mt-1">
+                            <span v-if="!diagnosticsResult || !diagnosticsResult.audit" class="text-lg font-bold text-slate-400">-</span>
+                            <span v-else-if="!diagnosticsResult.audit.mismatch" class="text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 flex items-center gap-1">
+                                ✓ ยอดตรงกัน (Pass)
+                            </span>
+                            <span v-else class="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200 flex items-center gap-1">
+                                ✕ ไม่ตรงกัน (Diff: {{ formatNumber(Math.abs(diagnosticsResult.audit.totalConfirmQty - diagnosticsResult.audit.totalPackQty)) }})
+                            </span>
+                        </div>
+                        <span class="text-[10px] text-slate-400">ตรวจผลต่างจำนวนสินค้า</span>
+                    </div>
+                    <div :class="['w-10 h-10 rounded-xl flex items-center justify-center text-lg', (diagnosticsResult && diagnosticsResult.audit && !diagnosticsResult.audit.mismatch) ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600']">
+                        ⚖️
+                    </div>
+                </div>
+
+                <!-- Card 4: Model Name & Prefix Type -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">4. Model & Destination</span>
+                        <span class="text-sm font-extrabold text-slate-800 font-mono mt-1 block truncate max-w-[170px]" :title="(diagnosticsResult && diagnosticsResult.audit) ? diagnosticsResult.audit.modelName : ''">
+                            {{ (diagnosticsResult && diagnosticsResult.audit) ? diagnosticsResult.audit.modelName : '-' }}
+                        </span>
+                        <span class="text-[10px] text-slate-400">
+                            {{ (diagnosticsResult && diagnosticsResult.step2_prefix && diagnosticsResult.step2_prefix.data) ? 'Prefix: ' + diagnosticsResult.step2_prefix.data.type + ' (' + diagnosticsResult.step2_prefix.data.ship_to + ')' : 'ปลายทาง WDC' }}
+                        </span>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center text-lg">
+                        🎯
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- CSV Output Preview Table Card -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pb-4 mb-4 border-b border-slate-150">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <span>📄</span> ตัวอย่างไฟล์ CSV สำหรับส่งเข้า SFTP Western Digital
+                            <span class="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                                25 Columns Standard
+                            </span>
+                        </h2>
+                        <div v-if="diagnosticsResult && diagnosticsResult.audit && diagnosticsResult.audit.targetFilename" class="text-xs font-mono text-slate-600 mt-1 flex items-center gap-1.5">
+                            <span class="font-bold text-slate-700">ชื่อไฟล์นำออก:</span>
+                            <span class="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-emerald-700 font-bold select-all">{{ diagnosticsResult.audit.targetFilename }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex items-center gap-2">
+                        <button 
+                            @click="downloadSimulatedCSV" 
+                            :disabled="!diagnosticsResult || !diagnosticsResult.step9_audit_csv || !diagnosticsResult.step9_audit_csv.data || diagnosticsResult.step9_audit_csv.data.length === 0" 
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition shadow-sm disabled:opacity-40 flex items-center gap-1.5"
+                        >
+                            <span>📥</span> ดาวน์โหลดตัวอย่าง CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CSV Table -->
+                <div v-if="!diagnosticsResult || !diagnosticsResult.step9_audit_csv || !diagnosticsResult.step9_audit_csv.data || diagnosticsResult.step9_audit_csv.data.length === 0" class="py-12 text-center text-slate-400 text-xs">
+                    <span class="text-3xl block mb-2">📭</span>
+                    ยังไม่มีข้อมูลจำลอง CSV กรุณาเลือก DO แล้วกดปุ่ม "วิเคราะห์ Flow" ด้านบน
+                </div>
+                <div v-else class="overflow-x-auto custom-scrollbar border border-slate-200 rounded-xl">
+                    <table class="w-full text-left border-collapse text-xs whitespace-nowrap">
+                        <thead class="bg-slate-800 text-white text-[11px]">
+                            <tr>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">#</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">SupplierName</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">PartName</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">SHIPDATE</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">INVNUM (DO)</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">Transfer Order (PO)</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">PARTNUMBER</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">Pallet Number</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">MODEL</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">Plt</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">QTY</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">SUBINVENTORY</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700 text-emerald-400">Build Name</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">ETA</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">Time</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">shipper</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">Truck or Air</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">Ship to</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">DN#</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">Remark</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">BOXID</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">BOXQTY</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700 text-amber-300">PACKID</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700 text-amber-300">PACKQTY</th>
+                                <th class="px-3 py-2.5 font-medium border-r border-slate-700">TRAYID</th>
+                                <th class="px-3 py-2.5 font-medium">SERIAL</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 bg-white font-mono text-[11px]">
+                            <tr v-for="(row, idx) in ((diagnosticsResult && diagnosticsResult.step9_audit_csv && diagnosticsResult.step9_audit_csv.data) ? diagnosticsResult.step9_audit_csv.data : [])" :key="idx" class="hover:bg-slate-50 transition">
+                                <td class="px-3 py-2 text-slate-400 border-r border-slate-100">{{ idx + 1 }}</td>
+                                <td class="px-3 py-2 font-semibold text-slate-800 border-r border-slate-100">{{ formatCellValue(row.SupplierName) }}</td>
+                                <td class="px-3 py-2 text-slate-700 border-r border-slate-100">{{ formatCellValue(row.PartName) }}</td>
+                                <td class="px-3 py-2 font-semibold text-blue-700 border-r border-slate-100 bg-blue-50/30">{{ formatCellValue(row.SHIPDATE) }}</td>
+                                <td class="px-3 py-2 font-bold text-emerald-700 border-r border-slate-100">{{ formatCellValue(row.INVNUM) }}</td>
+                                <td class="px-3 py-2 text-slate-700 border-r border-slate-100">{{ formatCellValue(row.TransferOrder) }}</td>
+                                <td class="px-3 py-2 text-slate-700 border-r border-slate-100">{{ formatCellValue(row.PARTNUMBER) }}</td>
+                                <td class="px-3 py-2 text-slate-700 border-r border-slate-100">{{ formatCellValue(row.PalletNumber) }}</td>
+                                <td class="px-3 py-2 font-bold text-indigo-700 border-r border-slate-100">{{ formatCellValue(row.MODEL) }}</td>
+                                <td class="px-3 py-2 text-slate-500 border-r border-slate-100">{{ formatCellValue(row.Plt) }}</td>
+                                <td class="px-3 py-2 font-semibold text-slate-800 border-r border-slate-100">{{ formatCellValue(row.QTY) }}</td>
+                                <td class="px-3 py-2 text-slate-500 border-r border-slate-100">{{ formatCellValue(row.SUBINVENTORY) || '-' }}</td>
+                                <td class="px-3 py-2 font-semibold text-emerald-700 border-r border-slate-100 bg-emerald-50/40">{{ formatCellValue(row.BuildName) || '-' }}</td>
+                                <td class="px-3 py-2 text-slate-400 border-r border-slate-100">-</td>
+                                <td class="px-3 py-2 text-slate-400 border-r border-slate-100">-</td>
+                                <td class="px-3 py-2 text-slate-400 border-r border-slate-100">-</td>
+                                <td class="px-3 py-2 text-slate-600 border-r border-slate-100">{{ formatCellValue(row.TruckOrAir) }}</td>
+                                <td class="px-3 py-2 font-semibold text-slate-700 border-r border-slate-100">{{ formatCellValue(row.ShipTo) }}</td>
+                                <td class="px-3 py-2 text-slate-400 border-r border-slate-100">-</td>
+                                <td class="px-3 py-2 text-slate-400 border-r border-slate-100">-</td>
+                                <td class="px-3 py-2 text-slate-600 border-r border-slate-100 text-[10px]">{{ formatCellValue(row.BOXID) }}</td>
+                                <td class="px-3 py-2 text-slate-700 border-r border-slate-100">{{ formatCellValue(row.BOXQTY) }}</td>
+                                <td class="px-3 py-2 font-bold text-purple-700 border-r border-slate-100 bg-purple-50/40">{{ formatCellValue(row.PACKID) }}</td>
+                                <td class="px-3 py-2 font-bold text-purple-700 border-r border-slate-100 bg-purple-50/40">{{ formatCellValue(row.PACKQTY) }}</td>
+                                <td class="px-3 py-2 text-slate-400 border-r border-slate-100">-</td>
+                                <td class="px-3 py-2 text-slate-400">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Clone Data Vue2-Flow Interactive Modal -->
+        <div v-if="showCloneModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-xs p-3 sm:p-5 transition-all">
+            <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-6xl max-h-[94vh] flex flex-col overflow-hidden animate-fade-in">
+                
+                <!-- Modal Header -->
+                <div class="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between border-b border-indigo-900/50 shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-xl shadow-inner">
+                            📦
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-base font-bold tracking-tight">แผนผังจำลองการ Clone ข้อมูล (Production ➔ Development)</h3>
+                                <span class="text-[11px] font-bold bg-blue-500/30 text-blue-200 border border-blue-400/40 px-2.5 py-0.5 rounded-full">
+                                    Vue2-Flow Pipeline (11 Tables)
+                                </span>
+                            </div>
+                            <div class="text-xs text-slate-300 mt-0.5 flex items-center gap-2">
+                                <span>DO: <b class="text-amber-300 font-mono">{{ selectedDO ? selectedDO.do : '-' }}</b></span>
+                                <span class="text-slate-500">•</span>
+                                <span>แหล่งข้อมูล: <b class="text-emerald-400">BITINTRA (Prod) / SGFCDB02</b></span>
+                                <span class="text-slate-500">➔</span>
+                                <span>ปลายทาง: <b class="text-cyan-300">BITINTRADEV (Development)</b></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button @click="closeCloneModal" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center text-sm transition">
+                        ✕
+                    </button>
+                </div>
+
+                <!-- Modal Sub-bar: Status & Metrics Summary -->
+                <div class="px-6 py-2.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
+                    <div class="flex items-center gap-4 text-slate-600">
+                        <div class="flex items-center gap-1.5">
+                            <span class="font-bold text-slate-700">จำนวนตาราง:</span>
+                            <span class="bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded border border-indigo-200">11 Tables</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="font-bold text-slate-700">รายการข้อมูลที่พบใน Prod:</span>
+                            <span v-if="loadingClonePreview" class="text-slate-400 italic">กำลังสำรวจ Prod...</span>
+                            <span v-else class="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200 font-mono">{{ cloneTotalPreviewRows }} แถว</span>
+                        </div>
+                        <div v-if="cloneFinished" class="text-emerald-600 font-bold flex items-center gap-1">
+                            <span>✓</span> Clone สำเร็จครบทั้ง 11 ตารางแล้ว
+                        </div>
+                    </div>
+
+                    <div class="text-[11px] text-slate-500 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> ปลอดภัย 100%: คัดลอกเข้าเฉพาะฐานข้อมูล Dev เท่านั้น
+                    </div>
+                </div>
+
+                <!-- Modal Body: Interactive Vue2-flow Pipeline Canvas + Data Detail Drawer -->
+                <div class="relative flex-grow bg-slate-100/70 flex overflow-hidden h-[540px]">
+                    
+                    <!-- Left / Center: Vue2-flow Canvas -->
+                    <div class="flex-grow relative h-full">
+                        <v-flow 
+                            ref="cloneVflow"
+                            :nodes="cloneFlowNodes" 
+                            :conns="cloneFlowConns"
+                            :grid="true"
+                            :zoomable="true"
+                            :pannable="true"
+                            :draggable="true"
+                            @node-click="selectCloneNode"
+                        >
+                            <template slot="node" slot-scope="{ node }">
+                                <div 
+                                    @click.stop="selectCloneNode(node)"
+                                    :class="[
+                                        'rounded-xl border p-2.5 bg-white shadow-sm transition-all duration-200 flex flex-col justify-between cursor-pointer select-none',
+                                        selectedCloneNode && selectedCloneNode.id === node.id ? 'border-indigo-600 ring-4 ring-indigo-200 shadow-md scale-[1.02]' : 
+                                        (node.status === 'success' ? 'border-emerald-400 ring-2 ring-emerald-100 bg-emerald-50/30' : 
+                                        (node.status === 'running' ? 'border-blue-500 ring-3 ring-blue-100 animate-pulse bg-blue-50/40' : 'border-slate-200 hover:border-slate-300'))
+                                    ]"
+                                    :style="{ width: (node.width || 230) + 'px', minHeight: (node.height || 95) + 'px' }"
+                                >
+                                    <div class="flex items-start justify-between gap-1.5">
+                                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                                            <div class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center text-xs shrink-0 font-bold">
+                                                {{ node.icon || '📦' }}
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <div class="flex items-center gap-1 min-w-0">
+                                                    <div class="text-[11px] font-bold text-slate-800 truncate" :title="node.name">
+                                                        {{ node.name }}
+                                                    </div>
+                                                    <span 
+                                                        v-if="node.isCustom" 
+                                                        title="ตารางนี้เพิ่มเติมนอกเหนือจาก Flow ปกติ"
+                                                        class="text-[7.5px] font-extrabold px-1 py-0.2 rounded-full bg-purple-100 text-purple-700 border border-purple-300 shrink-0 font-mono"
+                                                    >
+                                                        ✨CUSTOM
+                                                    </span>
+                                                </div>
+                                                <div class="text-[9px] font-mono text-slate-400 truncate" :title="node.table">
+                                                    {{ node.table }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span 
+                                            :class="[
+                                                'text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 font-mono',
+                                                node.status === 'success' ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' :
+                                                (node.status === 'running' ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-slate-100 text-slate-600 border border-slate-200')
+                                            ]"
+                                        >
+                                            {{ node.status === 'success' ? '✓ ' + (node.count || 0) + ' แถว' : (node.status === 'running' ? '⏳ Copying' : (node.count || 0) + ' แถว') }}
+                                        </span>
+                                    </div>
+
+                                    <div class="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between text-[9px] text-slate-500">
+                                        <span class="font-mono text-slate-400">{{ node.db || 'BITINTRA ➔ DEV' }}</span>
+                                        <span class="text-indigo-600 font-semibold hover:underline flex items-center gap-0.5">
+                                            คลิกดูข้อมูล ➔
+                                        </span>
+                                    </div>
+                                </div>
+                            </template>
+                        </v-flow>
+                    </div>
+
+                    <!-- Right Side: Data Detail Inspector Drawer -->
+                    <div 
+                        v-if="selectedCloneNode" 
+                        class="w-[420px] sm:w-[480px] bg-white border-l border-slate-200 flex flex-col shrink-0 h-full overflow-hidden shadow-2xl z-20 animate-fade-in"
+                    >
+                        <!-- Inspector Header -->
+                        <div class="p-3.5 bg-slate-900 text-white flex items-center justify-between shrink-0">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <span class="text-base">{{ selectedCloneNode.icon }}</span>
+                                <div class="min-w-0">
+                                    <h4 class="text-xs font-bold text-white truncate">{{ selectedCloneNode.name }}</h4>
+                                    <span class="text-[10px] font-mono text-indigo-300 truncate block">{{ selectedCloneNode.table }}</span>
+                                </div>
+                            </div>
+                            <button 
+                                @click="selectedCloneNode = null" 
+                                class="w-6 h-6 rounded-md bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center text-xs transition"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <!-- Inspector Sub-bar -->
+                        <div class="px-3.5 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs shrink-0">
+                            <span class="text-slate-600 font-medium">รายการข้อมูลที่จะบันทึกลง Dev:</span>
+                            <span class="font-mono font-bold text-emerald-700 bg-emerald-100/70 border border-emerald-300 px-2 py-0.5 rounded-full">
+                                {{ getCloneNodeRows(selectedCloneNode).length }} แถว
+                            </span>
+                        </div>
+
+                        <!-- Rows Content List / Table -->
+                        <div class="flex-grow overflow-y-auto p-3 custom-scrollbar space-y-3 bg-slate-50/50">
+                            <div v-if="getCloneNodeRows(selectedCloneNode).length === 0" class="py-16 text-center text-slate-400 text-xs">
+                                <span class="text-3xl block mb-2">📭</span>
+                                ไม่พบข้อมูลแถวในตารางนี้สำหรับ DO ที่เลือก
+                            </div>
+                            
+                            <div 
+                                v-for="(row, rIdx) in getCloneNodeRows(selectedCloneNode)" 
+                                :key="rIdx"
+                                class="bg-white rounded-xl border border-slate-200 p-3 shadow-xs font-mono text-[11px]"
+                            >
+                                <div class="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-100 text-[10px] font-sans">
+                                    <span class="font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">แถวที่ #{{ rIdx + 1 }}</span>
+                                    <span class="text-emerald-600 font-semibold">Source: Production</span>
+                                </div>
+                                <div class="grid grid-cols-1 gap-1">
+                                    <div 
+                                        v-for="(val, col) in row" 
+                                        :key="col"
+                                        class="flex items-start justify-between gap-2 py-0.5 border-b border-slate-50 last:border-0"
+                                    >
+                                        <span class="text-slate-500 font-sans text-[10px] shrink-0">{{ col }}:</span>
+                                        <span class="text-slate-800 font-bold break-all text-right select-all" :title="formatCellValue(val)">
+                                            {{ formatCellValue(val) !== '' ? formatCellValue(val) : '<null>' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Modal Footer: Action Buttons -->
+                <div class="px-6 py-3.5 bg-white border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
+                    <button 
+                        @click="closeCloneModal"
+                        class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 transition"
+                    >
+                        {{ cloneFinished ? 'ปิดหน้าต่าง' : 'ยกเลิก' }}
+                    </button>
+
+                    <div class="flex items-center gap-2">
+                        <button 
+                            v-if="!cloneFinished"
+                            @click="executeClonePipeline"
+                            :disabled="isCloning || loadingClonePreview"
+                            class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition shadow-md disabled:opacity-50 flex items-center gap-2"
+                        >
+                            <span v-if="!isCloning">🚀 ยืนยันเริ่ม Clone ข้อมูลเข้า BITINTRADEV</span>
+                            <span v-else class="flex items-center gap-2">
+                                <span class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
+                                กำลังดำเนินการ Clone เข้า BITINTRADEV...
+                            </span>
+                        </button>
+
+                        <button 
+                            v-else
+                            @click="switchToDevAfterClone"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition shadow-md flex items-center gap-2"
+                        >
+                            <span>🌱</span> สลับไปดูที่โหมด Development ทันที
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- All 10 Steps Troubleshooting & Error Checklist Modal -->
+        <div v-if="showAllTroubleshootingModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 backdrop-blur-xs p-3 sm:p-5 transition-all">
+            <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden animate-fade-in">
+                <!-- Modal Header -->
+                <div class="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between border-b border-indigo-900/50 shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-xl shadow-inner">
+                            🛠️
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-base font-bold tracking-tight">คู่มือสรุปจุดเสี่ยงที่ทำให้ Script ล้มเหลว & วิธีแก้ไขข้อมูลครบทั้ง 10 Steps</h3>
+                                <span class="text-[11px] font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 px-2.5 py-0.5 rounded-full">
+                                    FCA Root Cause Checklist
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-300 mt-0.5">รวมสาเหตุข้อผิดพลาด (Root Causes), ตารางเป้าหมายที่ต้องแก้ไข และวิธีปฏิบัติการเพื่อให้ระบบรันผ่านหมดทุก Step</p>
+                        </div>
+                    </div>
+                    <button @click="showAllTroubleshootingModal = false" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center text-sm transition">
+                        ✕
+                    </button>
+                </div>
+
+                <!-- Modal Body: 10 Steps Cards Grid -->
+                <div class="p-5 sm:p-6 overflow-y-auto custom-scrollbar flex-grow bg-slate-50/70 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div 
+                            v-for="(guide, stepNum) in troubleshootingGuide" 
+                            :key="stepNum"
+                            :class="[
+                                'bg-white p-4 rounded-xl border transition shadow-xs flex flex-col justify-between hover:shadow-md',
+                                stepNum == 6 ? 'border-purple-300 ring-1 ring-purple-200 bg-purple-50/10' : 'border-slate-200'
+                            ]"
+                        >
+                            <div>
+                                <div class="flex items-start justify-between gap-2 pb-2.5 mb-2.5 border-b border-slate-100">
+                                    <div>
+                                        <span class="text-xs font-bold text-slate-800 block">{{ guide.title }}</span>
+                                        <span class="text-[10px] font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 inline-block mt-0.5">{{ guide.table }}</span>
+                                        <span class="text-[10px] text-slate-400 ml-1">({{ guide.db }})</span>
+                                    </div>
+                                    <span v-if="stepNum == 6" class="text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-300">CUSTOM</span>
+                                </div>
+
+                                <div class="space-y-2.5 text-xs">
+                                    <!-- Impact / Risk -->
+                                    <div class="bg-amber-50/80 p-2 rounded-lg border border-amber-200/80 text-[10.5px]">
+                                        <span class="font-bold text-amber-900 block">⚡ ผลกระทบต่อ Script:</span>
+                                        <span class="text-amber-850 font-mono">{{ guide.risk }}</span>
+                                    </div>
+
+                                    <!-- Root Causes -->
+                                    <div>
+                                        <span class="text-[10.5px] font-bold text-rose-700 block flex items-center gap-1">
+                                            <span>⚠️</span> สาเหตุที่ทำให้ Script Error:
+                                        </span>
+                                        <ul class="list-disc list-inside text-[11px] text-slate-600 mt-0.5 space-y-0.5 leading-relaxed pl-1">
+                                            <li v-for="(cause, cIdx) in guide.causes" :key="cIdx">{{ cause }}</li>
+                                        </ul>
+                                    </div>
+
+                                    <!-- How to Fix -->
+                                    <div class="pt-2 border-t border-slate-100">
+                                        <span class="text-[10.5px] font-bold text-emerald-700 block flex items-center gap-1">
+                                            <span>💡</span> วิธีแก้ไขให้ผ่าน:
+                                        </span>
+                                        <ol class="list-decimal list-inside text-[11px] text-slate-700 mt-0.5 space-y-0.5 leading-relaxed pl-1 font-medium">
+                                            <li v-for="(step, sIdx) in guide.fixSteps" :key="sIdx">{{ step }}</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10.5px]">
+                                <span class="text-slate-500">ทีมงาน: <b class="text-indigo-800">{{ guide.owner }}</b></span>
+                                <button 
+                                    @click="selectStepFromModal(stepNum)"
+                                    class="text-indigo-600 hover:text-indigo-800 font-bold hover:underline flex items-center gap-0.5"
+                                >
+                                    <span>เลือกดู Step {{ stepNum }}</span> ➔
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="px-6 py-3.5 bg-white border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shrink-0">
+                    <span class="text-xs text-slate-500">💡 เมื่อแก้ไขข้อมูลในฐานข้อมูลตามคำแนะนำเรียบร้อย ให้กดปุ่ม <b>"วิเคราะห์ Flow"</b> หรือ <b>"รันเฉพาะขั้นนี้"</b> เพื่อทดสอบอีกครั้ง</span>
+                    <button 
+                        @click="showAllTroubleshootingModal = false"
+                        class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 transition shadow-sm"
+                    >
+                        ปิดหน้าต่าง
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Vue App Logic -->
+    <script>
+        new Vue({
+            el: '#vue-app',
+            data: {
+                globalEnv: 'production', // 'production' | 'development'
+                selectedDate: '2026-08-10',
+                excludeSentDOs: true,
+                loadingDos: false,
+                isDiagnosing: false,
+                isSteppingThrough: false,
+                stepThroughCancel: false,
+                runningStepNum: null,
+                isCloning: false,
+                doList: [],
+                selectedDO: null,
+                selectedNodeId: '1',
+                diagnosticsResult: null,
+                
+                // Flowchart Initial Nodes Specification for Vue2-flow
+                flowNodes: [
+                    {
+                        id: '1',
+                        stepNum: 1,
+                        name: '1. ตรวจสอบ DO ประจำวัน',
+                        sublabel: 'WMS.HIT_SHIP_CONFIRM',
+                        tableName: 'WMS.HIT_SHIP_CONFIRM',
+                        database: 'BITINTRA_REAL (WMS)',
+                        env: 'production',
+                        icon: '📅',
+                        iconBg: '#eff6ff',
+                        iconColor: '#2563eb',
+                        x: 35,
+                        y: 40,
+                        width: 250,
+                        height: 105,
+                        status: 'idle',
+                        description: 'ดึงรายการ DO ที่มีการยืนยันการจัดส่ง (type="PACK") ในวันที่กำหนด และยังไม่เคยถูกบันทึกประวัติการส่งลงใน LOG_FTP',
+                        sql: '',
+                        dataSummary: '',
+                        timeMs: 0
+                    },
+                    {
+                        id: '2',
+                        stepNum: 2,
+                        name: '2. ตรวจสอบ Prefix Master',
+                        sublabel: 'WMS.HIT_SHIP_TO_MASTER',
+                        tableName: 'WMS.HIT_SHIP_TO_MASTER',
+                        database: 'BITINTRA_REAL (WMS)',
+                        env: 'production',
+                        icon: '🏷️',
+                        iconBg: '#f0fdf4',
+                        iconColor: '#16a34a',
+                        x: 345,
+                        y: 40,
+                        width: 250,
+                        height: 105,
+                        status: 'idle',
+                        description: 'ตรวจสอบ 4 ตัวอักษรแรกของ DO เพื่อระบุประเภทการขนส่ง (BPI / PRB) และรหัสคลังสินค้าปลายทางของ WDC',
+                        sql: '',
+                        dataSummary: '',
+                        timeMs: 0
+                    },
+                    {
+                        id: '3',
+                        stepNum: 3,
+                        name: '3. ดึงลอตผลิต WMS Match',
+                        sublabel: 'SHIPMENTPALLET_BOX_PROD_HTC',
+                        tableName: 'WMS.SHIPMENTPALLET_BOX_PROD_HTC',
+                        database: 'BITINTRA_REAL (WMS)',
+                        env: 'production',
+                        icon: '🔗',
+                        iconBg: '#fdf4ff',
+                        iconColor: '#9333ea',
+                        x: 655,
+                        y: 40,
+                        width: 250,
+                        height: 105,
+                        status: 'idle',
+                        description: 'เชื่อมโยง DO ไปยังแผนงานจัดส่ง เพื่อดึง Customer PN, PO, Store Lot, Production Lot และจำนวนกล่อง',
+                        sql: '',
+                        dataSummary: '',
+                        timeMs: 0
+                    },
+                    {
+                        id: '4',
+                        stepNum: 4,
+                        name: '4. ยืนยันจัดส่ง & พาเลท',
+                        sublabel: 'WMS.HIT_PALLET_DATA',
+                        tableName: 'WMS.HIT_SHIP_CONFIRM / PALLET',
+                        database: 'BITINTRA_REAL (WMS)',
+                        env: 'production',
+                        icon: '🚚',
+                        iconBg: '#fff7ed',
+                        iconColor: '#ea580c',
+                        x: 965,
+                        y: 40,
+                        width: 250,
+                        height: 105,
+                        status: 'idle',
+                        description: 'ตรวจสอบข้อมูลหมายเลขพาเลท (Pallet Running), วันที่ส่งมอบ (Ship Date) และชื่อเรียกกล่องสินค้า',
+                        sql: '',
+                        dataSummary: '',
+                        timeMs: 0
+                    },
+                    {
+                        id: '5',
+                        stepNum: 5,
+                        name: '5. บาร์โค้ดการแพ็ก Hitachi',
+                        sublabel: 'HITACHI.PROD_DATA',
+                        tableName: 'HITACHI.PROD_DATA',
+                        database: 'SGFCDB02 / HITACHI02',
+                        env: 'production',
+                        icon: '📦',
+                        iconBg: '#eef2ff',
+                        iconColor: '#4f46e5',
+                        x: 965,
+                        y: 215,
+                        width: 250,
+                        height: 105,
+                        status: 'idle',
+                        description: 'ดึงข้อมูล Pack ID จากตาราง HITACHI.PROD_DATA โดยตรวจสอบว่ามี pack_id ครบทุก Lot และไม่มีค่าว่าง',
+                        sql: '',
+                        dataSummary: '',
+                        timeMs: 0
+                    },
+                    {
+                        id: '6',
+                        stepNum: 6,
+                        isCustom: true,
+                        name: '6. ตรวจสอบ Pack Header',
+                        sublabel: 'HITACHI.PACK_HEADER',
+                        tableName: 'HITACHI.PACK_HEADER',
+                        database: 'SGFCDB02 / HITACHI02',
+                        env: 'production',
+                        icon: '📋',
+                        iconBg: '#fef3c7',
+                        iconColor: '#d97706',
+                        x: 655,
+                        y: 215,
+                        width: 250,
+                        height: 105,
+                        status: 'idle',
+                        description: '[CUSTOM STEP] ตรวจสอบความสมบูรณ์ของ Pack ID ทุกตัวใน PACK_HEADER และเช็คสถานะ ship_status ต้องเป็น Active (แทรกเพิ่มเติมนอกเหนือจาก Flow ปกติของ Source Code)',
+                        sql: '',
+                        dataSummary: '',
+                        timeMs: 0
+                    },
+                    {
+                        id: '7',
+                        stepNum: 7,
+                        name: '7. หมายเหตุ Build Name',
+                        sublabel: 'WMS.HIT_FGREC_DATA',
+                        tableName: 'WMS.HIT_FGREC_DATA',
+                        database: 'BITINTRA_REAL (WMS)',
+                        env: 'production',
+                        icon: '📝',
+                        iconBg: '#f0fdfa',
+                        iconColor: '#0d9488',
+                        x: 345,
+                        y: 215,
+                        width: 250,
+                        height: 105,
+                        status: 'idle',
+                        description: 'ดึงข้อความหมายเหตุชิ้นงานจากฟิลด์ remark เพื่อนำไประบุลงในคอลัมน์ Build Name ของไฟล์ CSV',
+                        sql: '',
+                        dataSummary: '',
+                        timeMs: 0
+                    },
+                    {
+                        id: '8',
+                        stepNum: 8,
+                        name: '8. ชื่อรุ่น Oracle Master',
+                        sublabel: 'COMMON_ORACLE_ITEMMASTER',
+                        tableName: 'MASTER.COMMON_ORACLE_ITEMMASTER_ORG',
+                        database: 'BITINTRA_REAL (MASTER)',
+                        env: 'production',
+                        icon: '🏛️',
+                        iconBg: '#fefce8',
+                        iconColor: '#ca8a04',
+                        x: 35,
+                        y: 215,
+                        width: 250,
+                        height: 105,
+                        status: 'idle',
+                        description: 'ตรวจสอบความสม่ำเสมอของ Customer PN และสืบค้นชื่อ Model Name จาก Oracle Item Master โดยตัดวงเล็บออก',
+                        sql: '',
+                        dataSummary: '',
+                        timeMs: 0
+                    },
+                    {
+                        id: '9',
+                        stepNum: 9,
+                        name: '9. ตรวจสอบยอดรวม & CSV',
+                        sublabel: 'Qty Audit & 25 Cols Spec',
+                        tableName: 'Simulation Engine',
+                        database: 'Memory & Generator',
+                        env: 'production',
+                        icon: '⚖️',
+                        iconBg: '#ecfdf5',
+                        iconColor: '#059669',
+                        x: 35,
+                        y: 390,
+                        width: 250,
+                        height: 105,
+                        status: 'idle',
+                        description: 'เปรียบเทียบยอดรวม Plan QTY กับ Scanned Pack QTY และสร้างแถวข้อมูล CSV ตามโครงสร้าง 25 คอลัมน์',
+                        sql: '',
+                        dataSummary: '',
+                        timeMs: 0
+                    },
+                    {
+                        id: '10',
+                        stepNum: 10,
+                        name: '10. การส่ง SFTP & บันทึก Log',
+                        sublabel: 'WMS.HIT_TRANSFER_DATA_LOG',
+                        tableName: 'WMS.HIT_TRANSFER_DATA_LOG_FTP',
+                        database: 'WMS & SFTP Customer',
+                        env: 'production',
+                        icon: '🚀',
+                        iconBg: '#f8fafc',
+                        iconColor: '#475569',
+                        x: 345,
+                        y: 390,
+                        width: 250,
+                        height: 105,
+                        status: 'idle',
+                        description: 'ตรวจสอบการเชื่อมต่อ SFTP (sftp2.wdc.com / Belton.ppk) และจำลองการเพิ่ม Counter และบันทึกประวัติการส่ง',
+                        sql: '',
+                        dataSummary: '',
+                        timeMs: 0
+                    }
+                ],
+
+                // Flow Connections between Nodes
+                flowConns: [
+                    { id: 'c1-2', source: '1', target: '2', status: 'default', animated: false },
+                    { id: 'c2-3', source: '2', target: '3', status: 'default', animated: false },
+                    { id: 'c3-4', source: '3', target: '4', status: 'default', animated: false },
+                    { id: 'c4-5', source: '4', target: '5', status: 'default', animated: false },
+                    { id: 'c5-6', source: '5', target: '6', status: 'default', animated: false },
+                    { id: 'c6-7', source: '6', target: '7', status: 'default', animated: false },
+                    { id: 'c7-8', source: '7', target: '8', status: 'default', animated: false },
+                    { id: 'c8-9', source: '8', target: '9', status: 'default', animated: false },
+                    { id: 'c9-10', source: '9', target: '10', status: 'default', animated: false }
+                ],
+
+                // Clone Modal States & Flow Pipeline
+                showCloneModal: false,
+                loadingClonePreview: false,
+                cloneTotalPreviewRows: 0,
+                cloneFinished: false,
+                cloneFlowNodes: [
+                    { id: 'c1', name: '1. SHIPMENTDO_DATA', table: 'WMS.SHIPMENTDO_DATA', db: 'BITINTRA ➔ DEV', icon: '📦', x: 30, y: 30, width: 230, height: 95, status: 'idle', count: 0 },
+                    { id: 'c2', name: '2. HIT_SHIP_TO_MASTER', table: 'WMS.HIT_SHIP_TO_MASTER', db: 'BITINTRA ➔ DEV', icon: '🏷️', x: 30, y: 155, width: 230, height: 95, status: 'idle', count: 0 },
+                    { id: 'c3', name: '3. SHIPMENTPLAN_DATA', table: 'WMS.SHIPMENTPLAN_DATA', db: 'BITINTRA ➔ DEV', icon: '📋', x: 300, y: 30, width: 230, height: 95, status: 'idle', count: 0 },
+                    { id: 'c4', name: '4. lrv_wms_check_confirm_log', table: 'WMS.lrv_wms_check_confirm_log', db: 'BITINTRA ➔ DEV', icon: '📝', x: 300, y: 155, width: 230, height: 95, status: 'idle', count: 0 },
+                    { id: 'c5', name: '5. COMMON_ORACLE_ITEMMASTER', table: 'MASTER.COMMON_ORACLE_ITEMMASTER_ORG', db: 'BITINTRA ➔ DEV', icon: '🏢', x: 300, y: 280, width: 230, height: 95, status: 'idle', count: 0 },
+                    { id: 'c6', name: '6. SHIPMENTPALLET_BOX_PROD', table: 'WMS.SHIPMENTPALLET_BOX_PROD_HTC', db: 'BITINTRA ➔ DEV', icon: '🔗', x: 570, y: 30, width: 230, height: 95, status: 'idle', count: 0 },
+                    { id: 'c7', name: '7. HIT_FGREC_DATA', table: 'WMS.HIT_FGREC_DATA', db: 'BITINTRA ➔ DEV', icon: '🏭', x: 570, y: 155, width: 230, height: 95, status: 'idle', count: 0 },
+                    { id: 'c8', name: '8. HIT_SHIP_CONFIRM', table: 'WMS.HIT_SHIP_CONFIRM', db: 'BITINTRA ➔ DEV', icon: '🚚', x: 840, y: 30, width: 230, height: 95, status: 'idle', count: 0 },
+                    { id: 'c9', name: '9. HIT_PALLET_DATA', table: 'WMS.HIT_PALLET_DATA', db: 'BITINTRA ➔ DEV', icon: '🏷️', x: 840, y: 155, width: 230, height: 95, status: 'idle', count: 0 },
+                    { id: 'c10', name: '10. HITACHI PROD_DATA', table: 'HITACHI.PROD_DATA', db: 'SGFCDB02 ➔ DEV', icon: '⚙️', x: 840, y: 280, width: 230, height: 95, status: 'idle', count: 0 },
+                    { id: 'c11', name: '11. HITACHI PACK_HEADER', table: 'HITACHI.PACK_HEADER', db: 'SGFCDB02 ➔ DEV', icon: '📦', x: 840, y: 405, width: 230, height: 95, status: 'idle', count: 0, isCustom: true }
+                ],
+                cloneFlowConns: [
+                    { id: 'cc1', source: 'c1', target: 'c3', status: 'default', animated: false },
+                    { id: 'cc2', source: 'c1', target: 'c2', status: 'default', animated: false },
+                    { id: 'cc3', source: 'c3', target: 'c4', status: 'default', animated: false },
+                    { id: 'cc4', source: 'c3', target: 'c5', status: 'default', animated: false },
+                    { id: 'cc5', source: 'c3', target: 'c6', status: 'default', animated: false },
+                    { id: 'cc6', source: 'c6', target: 'c7', status: 'default', animated: false },
+                    { id: 'cc7', source: 'c6', target: 'c8', status: 'default', animated: false },
+                    { id: 'cc8', source: 'c8', target: 'c9', status: 'default', animated: false },
+                    { id: 'cc9', source: 'c6', target: 'c10', status: 'default', animated: false },
+                    { id: 'cc10', source: 'c10', target: 'c11', status: 'default', animated: false }
+                ],
+                selectedCloneNode: null,
+                clonePreviewRows: {},
+
+                // Troubleshooting Guide & Error Cause Matrix (10 Steps)
+                showAllTroubleshootingModal: false,
+                troubleshootingGuide: {
+                    1: {
+                        title: 'Step 1: ตรวจสอบ DO ประจำวัน (Daily DO Trigger)',
+                        db: 'BITINTRA_REAL (WMS)',
+                        table: 'WMS.HIT_SHIP_CONFIRM / lrv_wms_check_confirm_log',
+                        risk: 'Script หา DO ไม่พบ หรือข้าม DO นั้นไป ไม่ถูกนำไปประมวลผล',
+                        causes: [
+                            'DO ยังไม่ได้ยืนยันสถานะประเภท PACK (ฟิลด์ type != "PACK")',
+                            'DO นี้เคยถูกส่งไฟล์ SFTP สำเร็จไปแล้ว และมีประวัติบันทึกในตาราง WMS.HIT_TRANSFER_DATA_LOG_FTP (ระบบกันส่งซ้ำ)',
+                            'ยังไม่มีการบันทึกยืนยันในตาราง WMS.lrv_wms_check_confirm_log'
+                        ],
+                        fixSteps: [
+                            'ตรวจสอบกับทีมคลังสินค้า (WMS) ว่าทำการยิงยืนยันการแพ็คเสร็จสมบูรณ์หรือยัง (status type = PACK)',
+                            'หากต้องการทดสอบซ้ำ ให้ตรวจสอบประวัติใน WMS.HIT_TRANSFER_DATA_LOG_FTP หรือลบประวัติ DO ออกชั่วคราว',
+                            'ตรวจสอบวันที่ (Ship Date) ในระบบว่าตรงกับรอบการส่งมอบหรือไม่'
+                        ],
+                        owner: 'ทีมงาน WMS / Dispatch'
+                    },
+                    2: {
+                        title: 'Step 2: ตรวจสอบ Prefix Master (Prefix & Destination)',
+                        db: 'BITINTRA_REAL (WMS)',
+                        table: 'WMS.HIT_SHIP_TO_MASTER',
+                        risk: 'Script แจ้ง Error: "Due to ( Not found data Prefix )" และสั่งหยุดการทำงานทันที (exit)',
+                        causes: [
+                            '4 ตัวอักษรแรกของหมายเลข DO (เช่น HGBC, HGBD, HRBC) ไม่มีบันทึกอยู่ในตาราง WMS.HIT_SHIP_TO_MASTER',
+                            'ฟิลด์ status ในตาราง HIT_SHIP_TO_MASTER มีค่าไม่เป็น "active" (เช่น Inactive หรือ ปิดการใช้งาน)'
+                        ],
+                        fixSteps: [
+                            'เปิดฐานข้อมูล BITINTRA_REAL ตรวจสอบตาราง WMS.HIT_SHIP_TO_MASTER',
+                            'เพิ่มแถวข้อมูล Prefix 4 ตัวอักษรแรกของ DO เช่น HGBC, กำหนด ship_to (เช่น BPI หรือ PRB) และ type',
+                            'กำหนดฟิลด์ status = "active"'
+                        ],
+                        owner: 'ทีมงาน IT Application / Master WMS'
+                    },
+                    3: {
+                        title: 'Step 3: ดึงลอตผลิต WMS Match (Plan & Box Matching)',
+                        db: 'BITINTRA_REAL (WMS)',
+                        table: 'WMS.SHIPMENTDO_DATA / SHIPMENTPLAN_DATA / SHIPMENTPALLET_BOX_PROD_HTC',
+                        risk: 'Script แจ้ง Error: "Due to ( Not found data WMS )" และสั่งหยุดการทำงานทันที (exit)',
+                        causes: [
+                            'DO ไม่ถูกเชื่อมโยงเข้ากับ Plan ID ในตาราง SHIPMENTDO_DATA',
+                            'ไม่มีข้อมูล Production Lot หรือกล่องสินค้าในตาราง SHIPMENTPALLET_BOX_PROD_HTC',
+                            'ฟิลด์ customer_pn, item_no, po_no, store_lot หรือ prod_lot เป็นค่าว่าง'
+                        ],
+                        fixSteps: [
+                            'ตรวจสอบในระบบ WMS ว่า DO ดังกล่าวผ่านขั้นตอน Assign Plan ID และ Pack Pallet เรียบร้อยหรือยัง',
+                            'ตรวจสอบตาราง WMS.SHIPMENTPALLET_BOX_PROD_HTC ว่ามีรายการ prod_lot ครบตามจำนวนกล่องหรือไม่'
+                        ],
+                        owner: 'ทีมงาน WMS / ระบบ Packing Plan'
+                    },
+                    4: {
+                        title: 'Step 4: ยืนยันจัดส่ง & พาเลท (Shipment & Pallet Confirm)',
+                        db: 'BITINTRA_REAL (WMS)',
+                        table: 'WMS.HIT_SHIP_CONFIRM / WMS.HIT_PALLET_DATA',
+                        risk: 'Script แจ้ง Error: "Due to ( Not found data Shipment )" และสั่งหยุดการทำงานทันที (exit)',
+                        causes: [
+                            'ไม่พบหมายเลขพาเลท running_pallet ใน WMS.HIT_PALLET_DATA สำหรับ prod_lot ดังกล่าว',
+                            'ฟิลด์ status ใน HIT_PALLET_DATA ไม่เป็น "Active"',
+                            'ฟิลด์ box_ship_name หรือ ship_date เป็นค่าว่าง'
+                        ],
+                        fixSteps: [
+                            'ตรวจสอบตาราง WMS.HIT_PALLET_DATA ว่า running_pallet มี status = "Active" หรือไม่',
+                            'ตรวจสอบว่า WMS.HIT_SHIP_CONFIRM มี type = "pack" และผูก running_pallet ตรงกัน'
+                        ],
+                        owner: 'ทีมงาน WMS Shipping'
+                    },
+                    5: {
+                        title: 'Step 5: บาร์โค้ดการแพ็ก Hitachi (Hitachi Prod Pack Scan)',
+                        db: 'SGFCDB02 (HITACHI)',
+                        table: 'HITACHI.PROD_DATA',
+                        risk: 'Script แจ้ง Error: "Due to data packing not found #please help check pack id on DO shipment current !!" และสั่งหยุดการทำงานทันที (exit)',
+                        causes: [
+                            'Production Lot จาก WMS ไม่มีบันทึกอยู่ในฐานข้อมูลโรงงานผลิต SGFCDB02.HITACHI.PROD_DATA',
+                            'สแกนบาร์โค้ดไม่สมบูรณ์ ทำให้ฟิลด์ pack_id ในตาราง PROD_DATA เป็นค่าว่าง (NULL / Empty String)'
+                        ],
+                        fixSteps: [
+                            'นำหมายเลข prod_lot ที่ระบบแจ้งเตือนว่าขาด ไปตรวจสอบในฐานข้อมูล SGFCDB02 ตาราง HITACHI.PROD_DATA',
+                            'ประสานงานแผนก Packing / IT ฝั่ง Hitachi เพื่อทำการสแกนหรือ Sync ข้อมูล pack_id ให้ตรงกับ Production Lot'
+                        ],
+                        owner: 'ทีมงาน Hitachi Production / Packing Line'
+                    },
+                    6: {
+                        title: 'Step 6: ตรวจสอบ Pack Header & Status [CUSTOM RULE]',
+                        db: 'SGFCDB02 (HITACHI)',
+                        table: 'HITACHI.PACK_HEADER',
+                        risk: 'ข้อมูลการจัดส่งล้มเหลว หรือถูกลูกค้ายกเลิก/ตีกลับ (เนื่องจาก Pack Header ไม่สมบูรณ์ หรือสถานะไม่พร้อมส่ง)',
+                        causes: [
+                            'Pack ID มีอยู่ใน PROD_DATA แต่ไม่พบในตาราง HITACHI.PACK_HEADER',
+                            'ฟิลด์ ship_status ในตาราง HITACHI.PACK_HEADER ไม่เป็น "Active" (เช่น สถานะเป็น Void, Cancel, Hold, หรือ Inactive)',
+                            'ฟิลด์ pack_size เป็น 0 หรือว่างเปล่า'
+                        ],
+                        fixSteps: [
+                            'ตรวจสอบตาราง HITACHI.PACK_HEADER ด้วย Pack ID ที่ระบบแจ้งเตือน',
+                            'แก้ไขฟิลด์ ship_status ให้เป็น "Active" และตรวจสอบ pack_size ให้ตรงกับมาตรฐานบรรจุภัณฑ์ (เช่น 100 ชิ้น/แพ็ค)'
+                        ],
+                        owner: 'ทีมงาน Hitachi Production & Quality Control'
+                    },
+                    7: {
+                        title: 'Step 7: หมายเหตุ Build Name (FG Receive Remark)',
+                        db: 'BITINTRA_REAL (WMS)',
+                        table: 'WMS.HIT_FGREC_DATA',
+                        risk: 'คอลัมน์ Build Name ในไฟล์ CSV สำหรับส่ง WDC จะกลายเป็นค่าว่าง (Blank)',
+                        causes: [
+                            'ไม่พบลอตการผลิต prod_lot ในตาราง WMS.HIT_FGREC_DATA',
+                            'ฟิลด์ remark ในตาราง HIT_FGREC_DATA ไม่มีข้อมูล'
+                        ],
+                        fixSteps: [
+                            'ตรวจสอบขั้นตอนการรับสินค้าเข้าคลัง FG (FG Receive Process)',
+                            'บันทึกข้อมูล remark หรือ Build Name ของลอตดังกล่าวลงในตาราง WMS.HIT_FGREC_DATA'
+                        ],
+                        owner: 'ทีมงาน WMS Inbound / FG Receive'
+                    },
+                    8: {
+                        title: 'Step 8: ชื่อรุ่น Oracle Master (Oracle Model Lookup)',
+                        db: 'BITINTRA_REAL (MASTER)',
+                        table: 'MASTER.COMMON_ORACLE_ITEMMASTER_ORG',
+                        risk: 'Script แจ้ง Error: "Due to ( Not found model name [MASTER] )" หรือส่งชื่อรุ่นเป็น "All"',
+                        causes: [
+                            'ไม่พบรหัสสินค้า item_no (Belton Part Number) ในตาราง MASTER.COMMON_ORACLE_ITEMMASTER_ORG',
+                            'Customer PN ใน DO มีหลายรายการปนกัน (ไม่ Uniform) ทำให้ระบบ fallback ไปใช้ชื่อ Model Name ว่า "All"'
+                        ],
+                        fixSteps: [
+                            'ตรวจสอบตาราง MASTER.COMMON_ORACLE_ITEMMASTER_ORG ว่ามี item_no ดังกล่าวหรือไม่',
+                            'เพิ่มหรือแก้ไขข้อมูล item_no และระบุ model_name ตามรูปแบบ: Model (Remark เช่น 204)'
+                        ],
+                        owner: 'ทีมงาน IT Master Data / ERP Support'
+                    },
+                    9: {
+                        title: 'Step 9: ตรวจสอบยอดรวม & CSV Preview (Qty Audit & CSV Spec)',
+                        db: 'Memory & Simulation Engine',
+                        table: 'WMS.SHIPMENTPLAN_DATA vs HITACHI.PACK_HEADER',
+                        risk: 'Script แจ้ง Error: "Due to QTY packing not equal QTY shipment" และไฟล์ CSV ไม่ผ่านการตรวจสอบของ WDC',
+                        causes: [
+                            'ยอดรวม Plan QTY จาก WMS ไม่เท่ากับผลรวม Pack Size จาก Hitachi Pack (จำนวนชิ้นไม่ตรงกัน)',
+                            'ข้อมูลฟิลด์บังคับใน 25 คอลัมน์ขาดหาย เช่น po_no, pallet_running, box_id, pack_id'
+                        ],
+                        fixSteps: [
+                            'ตรวจสอบผลต่างของจำนวน (Diff QTY) ระหว่าง Plan QTY กับ Pack QTY',
+                            'ตรวจสอบว่า WMS บันทึกจำนวนเกิน หรือฝ่ายผลิต Hitachi สแกน Pack ID ขาด ให้ปรับยอดให้ตรงกันก่อนส่งออก'
+                        ],
+                        owner: 'ทีมงาน WMS Shipping & Hitachi Packing Lead'
+                    },
+                    10: {
+                        title: 'Step 10: การส่ง SFTP & บันทึก Log (SFTP Upload & Log)',
+                        db: 'BITINTRA_REAL (WMS) & SFTP Customer',
+                        table: 'WMS.HIT_FTP_CONFIG / WMS.HIT_TRANSFER_DATA_LOG_FTP / WMS.HIT_RUNNING_TRANSFER_CUSTOMER_FTP',
+                        risk: 'Script แจ้ง Error: "Due to ( Get config error )" หรืออัปโหลดไฟล์ขึ้นเซิร์ฟเวอร์ SFTP ไม่สำเร็จ',
+                        causes: [
+                            'ไม่พบข้อมูลการตั้งค่า SFTP ในตาราง WMS.HIT_FTP_CONFIG',
+                            'ไม่พบไฟล์ SSH Private Key (Belton.ppk) หรือ Private Key ไม่ถูกต้อง',
+                            'เซิร์ฟเวอร์ปลายทาง sftp2.wdc.com ขัดข้อง หรือโดนบล็อกพอร์ต SFTP / Firewall ภายในองค์กร'
+                        ],
+                        fixSteps: [
+                            'ตรวจสอบตาราง WMS.HIT_FTP_CONFIG ว่ามี host, user, remote_path ถูกต้อง',
+                            'ตรวจสอบไฟล์ Key SSH ที่พาธ /var/www/html/prodline/hgst/fca/fca_shipment_ftp_to_wd/Belton.ppk',
+                            'ทดสอบการเชื่อมต่อ Network SFTP Port ไปยัง sftp2.wdc.com'
+                        ],
+                        owner: 'ทีมงาน IT Network / Infrastructure & System Admin'
+                    }
+                }
+            },
+
+            computed: {
+                activeStep() {
+                    const id = String(this.selectedNodeId || '1');
+                    return this.flowNodes.find(n => n.id === id || String(n.stepNum) === id) || this.flowNodes[0];
+                }
+            },
+
+            mounted() {
+                // Set default date to today or 2026-08-10 for sample data
+                const today = new Date().toISOString().slice(0, 10);
+                this.selectedDate = today;
+                this.fetchDOs();
+            },
+
+            methods: {
+                formatNumber(val) {
+                    if (val === undefined || val === null || isNaN(val)) return '0';
+                    return Number(val).toLocaleString();
+                },
+
+                formatCellValue(val) {
+                    if (val === null || val === undefined) return '';
+                    if (typeof val === 'object' && val.type === 'Buffer' && Array.isArray(val.data)) {
+                        try {
+                            return String.fromCharCode.apply(null, val.data);
+                        } catch (e) {
+                            return JSON.stringify(val);
+                        }
+                    }
+                    if (typeof val === 'object') return JSON.stringify(val);
+                    return String(val);
+                },
+
+                copyText(text) {
+                    if (!text) return;
+                    navigator.clipboard.writeText(text).then(() => {
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'success',
+                            title: 'คัดลอก SQL แล้ว',
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                    });
+                },
+
+                getStatusBadge(status) {
+                    switch (status) {
+                        case 'success':
+                            return { text: 'ผ่าน', class: 'bg-emerald-100 text-emerald-700 border-emerald-300', icon: '✓' };
+                        case 'running':
+                            return { text: 'กำลังรัน...', class: 'bg-blue-100 text-blue-700 border-blue-300 animate-pulse', icon: '⏳' };
+                        case 'error':
+                            return { text: 'ผิดพลาด', class: 'bg-rose-100 text-rose-700 border-rose-300', icon: '✕' };
+                        case 'warning':
+                            return { text: 'แจ้งเตือน', class: 'bg-amber-100 text-amber-700 border-amber-300', icon: '⚠️' };
+                        default:
+                            return { text: 'รอทำงาน', class: 'bg-slate-100 text-slate-500 border-slate-200', icon: '○' };
+                    }
+                },
+
+                getNodeBorderClass(node, isSelected) {
+                    const status = node.status || 'default';
+                    let border = 'border-slate-200';
+                    if (isSelected) {
+                        return 'border-indigo-600 ring-4 ring-indigo-100 shadow-md';
+                    }
+                    switch (status) {
+                        case 'success': return 'border-emerald-400 hover:border-emerald-500';
+                        case 'running': return 'border-blue-500 ring-4 ring-blue-100 animate-pulse';
+                        case 'error': return 'border-rose-400 hover:border-rose-500 shadow-sm';
+                        case 'warning': return 'border-amber-400 hover:border-amber-500';
+                        default: return 'border-slate-200 hover:border-slate-300';
+                    }
+                },
+
+                onNodeClick(node) {
+                    this.selectedNodeId = String(node.id || node.stepNum);
+                    this.$forceUpdate();
+                },
+
+                onPaneClick() {
+                    // keep current inspector active or allow deselect
+                },
+
+                closeDrawer() {
+                    // close action
+                },
+
+                resetFlowPositions() {
+                    const defaultPositions = [
+                        { id: '1', x: 35, y: 40 },
+                        { id: '2', x: 345, y: 40 },
+                        { id: '3', x: 655, y: 40 },
+                        { id: '4', x: 965, y: 40 },
+                        { id: '5', x: 965, y: 215 },
+                        { id: '6', x: 655, y: 215 },
+                        { id: '7', x: 345, y: 215 },
+                        { id: '8', x: 35, y: 215 },
+                        { id: '9', x: 35, y: 390 },
+                        { id: '10', x: 345, y: 390 }
+                    ];
+                    this.flowNodes.forEach(n => {
+                        const def = defaultPositions.find(p => p.id === n.id);
+                        if (def) {
+                            n.x = def.x;
+                            n.y = def.y;
+                        }
+                    });
+                    if (this.$refs.vflow) {
+                        this.$refs.vflow.resetView();
+                    }
+                },
+
+                getStepDataRows(step) {
+                    if (!step) return [];
+                    if (step.data) {
+                        if (Array.isArray(step.data)) return step.data;
+                        if (typeof step.data === 'object') return [step.data];
+                    }
+                    if (this.diagnosticsResult) {
+                        const stepKeys = ['', 'step1_trigger', 'step2_prefix', 'step3_wms', 'step4_ship_confirm', 'step5_hitachi_pack', 'step6_pack_header', 'step7_build_name', 'step8_oracle_model', 'step9_audit_csv', 'step10_sftp_config'];
+                        const key = stepKeys[step.stepNum];
+                        if (key && this.diagnosticsResult[key]) {
+                            const stepRes = this.diagnosticsResult[key];
+                            if (Array.isArray(stepRes.data)) return stepRes.data;
+                            if (Array.isArray(stepRes)) return stepRes;
+                            if (stepRes.data) return [stepRes.data];
+                        }
+                    }
+                    return [];
+                },
+
+                // Environment Switcher Methods
+                setGlobalEnv(env) {
+                    this.globalEnv = env;
+                    this.flowNodes.forEach(node => {
+                        this.$set(node, 'env', env);
+                        node.database = (env === 'development') 
+                            ? 'BITINTRADEV' 
+                            : ((node.stepNum === 5 || node.stepNum === 6) ? 'SGFCDB02 / HITACHI' : 'BITINTRA_REAL (WMS)');
+                    });
+                    this.flowNodes = [...this.flowNodes];
+                    this.$forceUpdate();
+                    this.fetchDOs();
+                },
+
+                toggleNodeEnv(node) {
+                    const newEnv = (node.env === 'development') ? 'production' : 'development';
+                    this.setStepEnv(node, newEnv);
+                },
+
+                setStepEnv(step, env) {
+                    if (!step) return;
+                    const targetNode = this.flowNodes.find(n => n.stepNum === step.stepNum || n.id === step.id);
+                    if (!targetNode) return;
+                    this.$set(targetNode, 'env', env);
+                    targetNode.database = (env === 'development') 
+                        ? 'BITINTRADEV' 
+                        : ((targetNode.stepNum === 5 || targetNode.stepNum === 6) ? 'SGFCDB02 / HITACHI' : 'BITINTRA_REAL (WMS)');
+                    this.flowNodes = [...this.flowNodes];
+                    this.$forceUpdate();
+                },
+
+                getTableHeaders(rows) {
+                    if (!rows || rows.length === 0) return [];
+                    return Object.keys(rows[0]).slice(0, 6);
+                },
+
+                async fetchDOs() {
+                    this.loadingDos = true;
+                    this.doList = [];
+                    this.selectedDO = null;
+                    try {
+                        const res = await axios.post('/api/debug/fca/dos', {
+                            date: this.selectedDate,
+                            excludeSent: this.excludeSentDOs,
+                            env: this.globalEnv
+                        });
+                        if (res.data && res.data.status === 200) {
+                            this.doList = res.data.data || [];
+                            if (this.doList.length > 0) {
+                                this.selectDO(this.doList[0]);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error fetching DOs:', err);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'เกิดข้อผิดพลาด',
+                            text: err.response?.data?.error || err.message
+                        });
+                    } finally {
+                        this.loadingDos = false;
+                    }
+                },
+
+                selectDO(item) {
+                    this.selectedDO = item;
+                    this.resetNodeStatuses();
+                },
+
+                async openCloneModal() {
+                    if (!this.selectedDO) {
+                        Swal.fire({ icon: 'warning', title: 'กรุณาเลือก DO', text: 'กรุณาเลือก DO ที่ต้องการ Clone ก่อน' });
+                        return;
+                    }
+                    if (this.globalEnv !== 'production') {
+                        Swal.fire({ icon: 'info', title: 'แจ้งเตือน', text: 'ระบบไม่อนุญาตให้ Clone ข้อมูลจาก Development ไปยัง Production (อนุญาตเฉพาะ Production -> Development เท่านั้น)' });
+                        return;
+                    }
+
+                    this.showCloneModal = true;
+                    this.cloneFinished = false;
+                    this.isCloning = false;
+
+                    this.selectedCloneNode = null;
+                    this.clonePreviewRows = {};
+
+                    // Reset clone flow nodes & conns
+                    this.cloneFlowNodes.forEach(node => {
+                        this.$set(node, 'status', 'idle');
+                        this.$set(node, 'count', 0);
+                    });
+                    this.cloneFlowConns.forEach(conn => {
+                        this.$set(conn, 'status', 'default');
+                        this.$set(conn, 'animated', false);
+                    });
+                    this.cloneFlowNodes = [...this.cloneFlowNodes];
+                    this.$forceUpdate();
+
+                    this.$nextTick(() => {
+                        if (this.$refs.cloneVflow) {
+                            this.$refs.cloneVflow.resetView();
+                        }
+                    });
+
+                    await this.fetchClonePreview();
+                },
+
+                closeCloneModal() {
+                    this.showCloneModal = false;
+                    this.selectedCloneNode = null;
+                },
+
+                selectCloneNode(node) {
+                    if (!node) return;
+                    this.selectedCloneNode = node;
+                    this.$forceUpdate();
+                },
+
+                getCloneNodeRows(node) {
+                    if (!node || !this.clonePreviewRows) return [];
+                    return this.clonePreviewRows[node.table] || [];
+                },
+
+                async fetchClonePreview() {
+                    if (!this.selectedDO) return;
+                    this.loadingClonePreview = true;
+                    try {
+                        const res = await axios.post('/api/debug/fca/clone-preview', {
+                            doNumber: this.selectedDO.do
+                        });
+
+                        if (res.data && res.data.status === 200) {
+                            const preview = res.data.data.preview || {};
+                            this.clonePreviewRows = res.data.data.previewRows || {};
+                            this.cloneTotalPreviewRows = res.data.data.totalPreviewRows || 0;
+
+                            this.cloneFlowNodes.forEach(node => {
+                                if (preview[node.table] !== undefined) {
+                                    this.$set(node, 'count', preview[node.table]);
+                                }
+                            });
+
+                            // If no node selected yet, select the first node
+                            if (!this.selectedCloneNode && this.cloneFlowNodes.length > 0) {
+                                this.selectedCloneNode = this.cloneFlowNodes[0];
+                            }
+
+                            this.cloneFlowNodes = [...this.cloneFlowNodes];
+                            this.$forceUpdate();
+                        }
+                    } catch (err) {
+                        console.error('Fetch clone preview error:', err);
+                    } finally {
+                        this.loadingClonePreview = false;
+                    }
+                },
+
+                async executeClonePipeline() {
+                    if (!this.selectedDO) return;
+                    this.isCloning = true;
+
+                    // Set nodes & connections to running
+                    this.cloneFlowNodes.forEach(n => this.$set(n, 'status', 'running'));
+                    this.cloneFlowConns.forEach(c => {
+                        this.$set(c, 'status', 'running');
+                        this.$set(c, 'animated', true);
+                    });
+                    this.cloneFlowNodes = [...this.cloneFlowNodes];
+                    this.$forceUpdate();
+
+                    try {
+                        const res = await axios.post('/api/debug/fca/clone-to-dev', {
+                            doNumber: this.selectedDO.do,
+                            sourceEnv: 'production'
+                        });
+
+                        if (res.data && res.data.status === 200) {
+                            const result = res.data.data;
+                            const stats = result.stats || [];
+
+                            this.cloneFlowNodes.forEach(node => {
+                                const st = stats.find(s => s.table === node.table);
+                                if (st) {
+                                    this.$set(node, 'count', st.count);
+                                    this.$set(node, 'status', 'success');
+                                } else {
+                                    this.$set(node, 'status', 'success');
+                                }
+                            });
+
+                            this.cloneFlowConns.forEach(c => {
+                                this.$set(c, 'status', 'success');
+                                this.$set(c, 'animated', false);
+                            });
+
+                            this.cloneFinished = true;
+                            this.cloneFlowNodes = [...this.cloneFlowNodes];
+                            this.$forceUpdate();
+
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'success',
+                                title: `Clone สำเร็จ ${result.totalRowsCloned} แถว (${result.executionTime}ms)`,
+                                showConfirmButton: false,
+                                timer: 2500
+                            });
+                        } else {
+                            throw new Error(res.data?.error || 'Clone failed');
+                        }
+                    } catch (err) {
+                        console.error('Clone pipeline error:', err);
+                        this.cloneFlowNodes.forEach(n => this.$set(n, 'status', 'error'));
+                        this.cloneFlowConns.forEach(c => {
+                            this.$set(c, 'status', 'error');
+                            this.$set(c, 'animated', false);
+                        });
+                        this.cloneFlowNodes = [...this.cloneFlowNodes];
+                        this.$forceUpdate();
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'เกิดข้อผิดพลาดในการ Clone ข้อมูล',
+                            text: err.response?.data?.error || err.message
+                        });
+                    } finally {
+                        this.isCloning = false;
+                    }
+                },
+
+                switchToDevAfterClone() {
+                    this.closeCloneModal();
+                    this.setGlobalEnv('development');
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'info',
+                        title: 'สลับเข้าสู่โหมด Development แล้ว',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                },
+
+                resetNodeStatuses() {
+                    this.flowNodes.forEach(node => {
+                        this.$set(node, 'status', 'idle');
+                        this.$set(node, 'timeMs', 0);
+                        this.$set(node, 'dataSummary', '');
+                        this.$set(node, 'dataCount', 0);
+                        this.$set(node, 'message', '');
+                        this.$set(node, 'sql', '');
+                        this.$set(node, 'data', null);
+                    });
+                    this.flowConns.forEach(conn => {
+                        this.$set(conn, 'status', 'default');
+                        this.$set(conn, 'animated', false);
+                    });
+                    this.diagnosticsResult = null;
+                    this.runningStepNum = null;
+                    this.flowNodes = [...this.flowNodes];
+                    this.$forceUpdate();
+                },
+
+                async runSingleStep(step) {
+                    if (!step || !this.selectedDO) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'กรุณาเลือก DO',
+                            text: 'กรุณาเลือก DO จากรายการด้านบนก่อนทดสอบรัน Step',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        return;
+                    }
+
+                    const targetNode = this.flowNodes.find(n => n.stepNum === step.stepNum);
+                    if (!targetNode) return;
+
+                    this.selectedNodeId = String(targetNode.id || targetNode.stepNum);
+                    this.runningStepNum = targetNode.stepNum;
+                    this.$set(targetNode, 'status', 'running');
+                    this.flowNodes = [...this.flowNodes];
+                    this.$forceUpdate();
+
+                    try {
+                        const res = await axios.post('/api/debug/fca/diagnose-step', {
+                            doNumber: this.selectedDO.do,
+                            stepNum: targetNode.stepNum,
+                            env: targetNode.env || this.globalEnv
+                        }, { timeout: 15000 });
+
+                        if (res.data && res.data.status === 200) {
+                            const r = res.data.data;
+                            this.$set(targetNode, 'status', r.status || 'success');
+                            this.$set(targetNode, 'message', r.message || '');
+                            this.$set(targetNode, 'sql', r.sql || '');
+                            this.$set(targetNode, 'timeMs', r.executionTime || 0);
+                            this.$set(targetNode, 'data', r.data || null);
+
+                            if (Array.isArray(r.data)) {
+                                this.$set(targetNode, 'dataCount', r.data.length);
+                                this.$set(targetNode, 'dataSummary', r.data.length + ' รายการ');
+                            } else if (r.data) {
+                                this.$set(targetNode, 'dataCount', 1);
+                                this.$set(targetNode, 'dataSummary', '1 รายการ');
+                            }
+
+                            if (!this.diagnosticsResult) this.diagnosticsResult = {};
+                            const stepKeys = ['', 'step1_trigger', 'step2_prefix', 'step3_wms', 'step4_ship_confirm', 'step5_hitachi_pack', 'step6_pack_header', 'step7_build_name', 'step8_oracle_model', 'step9_audit_csv', 'step10_sftp_config'];
+                            const key = stepKeys[targetNode.stepNum];
+                            if (key) {
+                                this.$set(this.diagnosticsResult, key, r);
+                            }
+
+                            this.flowNodes = [...this.flowNodes];
+                            this.$forceUpdate();
+
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: r.status === 'success' ? 'success' : (r.status === 'warning' ? 'warning' : 'error'),
+                                title: `Step ${targetNode.stepNum} สำเร็จ (${r.executionTime}ms)`,
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                        } else {
+                            throw new Error(res.data?.error || 'Execution failed');
+                        }
+                    } catch (err) {
+                        console.error('Error running single step:', err);
+                        this.$set(targetNode, 'status', 'error');
+                        this.flowNodes = [...this.flowNodes];
+                        this.$forceUpdate();
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'เกิดข้อผิดพลาดในการรัน Step',
+                            text: err.response?.data?.error || err.message
+                        });
+                    } finally {
+                        this.runningStepNum = null;
+                        this.flowNodes = [...this.flowNodes];
+                        this.$forceUpdate();
+                    }
+                },
+
+                getEnvironmentsPayload() {
+                    const environments = {};
+                    this.flowNodes.forEach(n => {
+                        environments['step' + n.stepNum] = n.env || this.globalEnv;
+                    });
+                    environments.default = this.globalEnv;
+                    return environments;
+                },
+
+                async runDiagnose() {
+                    if (!this.selectedDO) return;
+                    this.isDiagnosing = true;
+                    this.resetNodeStatuses();
+
+                    try {
+                        // Set all running
+                        this.flowNodes.forEach(n => n.status = 'running');
+                        this.flowConns.forEach(c => {
+                            c.status = 'running';
+                            c.animated = true;
+                        });
+                        this.flowNodes = [...this.flowNodes];
+                        this.$forceUpdate();
+
+                        const res = await axios.post('/api/debug/fca/diagnose', {
+                            doNumber: this.selectedDO.do,
+                            environments: this.getEnvironmentsPayload()
+                        });
+
+                        if (res.data && res.data.status === 200) {
+                            this.diagnosticsResult = res.data.data;
+                            this.applyDiagnosticResults(this.diagnosticsResult);
+                        } else {
+                            throw new Error(res.data?.error || 'Failed to diagnose');
+                        }
+                    } catch (err) {
+                        console.error('Diagnose error:', err);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'การวิเคราะห์ผิดพลาด',
+                            text: err.response?.data?.error || err.message
+                        });
+                    } finally {
+                        this.isDiagnosing = false;
+                        this.flowNodes = [...this.flowNodes];
+                        this.$forceUpdate();
+                    }
+                },
+
+                applyDiagnosticResults(diag) {
+                    const stepsData = [
+                        diag.step1_trigger,
+                        diag.step2_prefix,
+                        diag.step3_wms,
+                        diag.step4_ship_confirm,
+                        diag.step5_hitachi_pack,
+                        diag.step6_pack_header,
+                        diag.step7_build_name,
+                        diag.step8_oracle_model,
+                        diag.step9_audit_csv,
+                        diag.step10_sftp_config
+                    ];
+
+                    this.flowNodes.forEach((node, idx) => {
+                        const stepData = stepsData[idx];
+                        if (stepData) {
+                            this.$set(node, 'status', stepData.status || 'idle');
+                            this.$set(node, 'message', stepData.message || '');
+                            this.$set(node, 'sql', stepData.sql || '');
+                            this.$set(node, 'timeMs', stepData.executionTime || 0);
+                            this.$set(node, 'data', stepData.data || null);
+                            if (stepData.env) {
+                                this.$set(node, 'env', stepData.env);
+                            }
+                            
+                            if (Array.isArray(stepData.data)) {
+                                this.$set(node, 'dataCount', stepData.data.length);
+                                this.$set(node, 'dataSummary', stepData.data.length + ' รายการ');
+                            } else if (stepData.data) {
+                                this.$set(node, 'dataCount', 1);
+                                this.$set(node, 'dataSummary', '1 รายการ');
+                            }
+                        }
+                    });
+
+                    // Update connections
+                    this.flowConns.forEach((conn, idx) => {
+                        const prevNode = this.flowNodes[idx];
+                        this.$set(conn, 'status', prevNode ? prevNode.status : 'default');
+                        this.$set(conn, 'animated', false);
+                    });
+
+                    this.flowNodes = [...this.flowNodes];
+                    this.$forceUpdate();
+                },
+
+                async toggleStepThrough() {
+                    if (this.isSteppingThrough) {
+                        this.stepThroughCancel = true;
+                        this.isSteppingThrough = false;
+                        return;
+                    }
+                    await this.autoStepThrough();
+                },
+
+                async autoStepThrough() {
+                    if (!this.selectedDO) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'กรุณาเลือก DO',
+                            text: 'กรุณาเลือกรายการ DO ด้านบนก่อนเริ่มจำลองทีละก้าว',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        return;
+                    }
+                    if (this.isDiagnosing || this.isSteppingThrough) return;
+
+                    this.isSteppingThrough = true;
+                    this.stepThroughCancel = false;
+
+                    // Reset nodes to idle
+                    this.flowNodes.forEach(n => {
+                        this.$set(n, 'status', 'idle');
+                        this.$set(n, 'timeMs', 0);
+                        this.$set(n, 'dataSummary', '');
+                    });
+                    this.flowConns.forEach(c => {
+                        this.$set(c, 'status', 'default');
+                        this.$set(c, 'animated', false);
+                    });
+
+                    try {
+                        let diag = this.diagnosticsResult;
+                        // Fetch fresh diagnosis if not yet loaded
+                        if (!diag) {
+                            this.isDiagnosing = true;
+                            const res = await axios.post('/api/debug/fca/diagnose', {
+                                doNumber: this.selectedDO.do,
+                                environments: this.getEnvironmentsPayload()
+                            });
+                            this.isDiagnosing = false;
+
+                            if (res.data && res.data.status === 200) {
+                                diag = res.data.data;
+                                this.diagnosticsResult = diag;
+                            } else {
+                                throw new Error(res.data?.error || 'Failed to fetch diagnostic data');
+                            }
+                        }
+
+                        const stepsData = [
+                            diag.step1_trigger,
+                            diag.step2_prefix,
+                            diag.step3_wms,
+                            diag.step4_ship_confirm,
+                            diag.step5_hitachi_pack,
+                            diag.step6_pack_header,
+                            diag.step7_build_name,
+                            diag.step8_oracle_model,
+                            diag.step9_audit_csv,
+                            diag.step10_sftp_config
+                        ];
+
+                        for (let i = 0; i < this.flowNodes.length; i++) {
+                            if (this.stepThroughCancel) break;
+
+                            const node = this.flowNodes[i];
+                            const stepData = stepsData[i];
+                            
+                            // 1. Set node as running
+                            this.$set(node, 'status', 'running');
+                            this.selectedNodeId = String(node.id || node.stepNum);
+
+                            if (i > 0) {
+                                this.$set(this.flowConns[i - 1], 'status', 'running');
+                                this.$set(this.flowConns[i - 1], 'animated', true);
+                            }
+
+                            // Wait 500ms for smooth animation
+                            for (let t = 0; t < 5; t++) {
+                                if (this.stepThroughCancel) break;
+                                await new Promise(r => setTimeout(r, 100));
+                            }
+                            if (this.stepThroughCancel) break;
+
+                            // 2. Set node result
+                            if (stepData) {
+                                this.$set(node, 'status', stepData.status || 'success');
+                                this.$set(node, 'message', stepData.message || '');
+                                this.$set(node, 'sql', stepData.sql || '');
+                                this.$set(node, 'timeMs', stepData.executionTime || 0);
+                                if (stepData.env) {
+                                    this.$set(node, 'env', stepData.env);
+                                }
+                                if (Array.isArray(stepData.data)) {
+                                    this.$set(node, 'dataCount', stepData.data.length);
+                                    this.$set(node, 'dataSummary', stepData.data.length + ' รายการ');
+                                } else if (stepData.data) {
+                                    this.$set(node, 'dataCount', 1);
+                                    this.$set(node, 'dataSummary', '1 รายการ');
+                                }
+                            }
+
+                            // 3. Update previous connector
+                            if (i > 0) {
+                                this.$set(this.flowConns[i - 1], 'status', node.status);
+                                this.$set(this.flowConns[i - 1], 'animated', false);
+                            }
+
+                            // Short pause before proceeding to next node
+                            await new Promise(r => setTimeout(r, 200));
+                        }
+
+                        if (!this.stepThroughCancel) {
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'success',
+                                title: 'จำลอง Flow ครบทั้ง 10 ขั้นตอนแล้ว',
+                                showConfirmButton: false,
+                                timer: 2000
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Step through error:', err);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'การจำลองทีละก้าวผิดพลาด',
+                            text: err.response?.data?.error || err.message
+                        });
+                    } finally {
+                        this.isDiagnosing = false;
+                        this.isSteppingThrough = false;
+                        this.stepThroughCancel = false;
+                    }
+                },
+
+                downloadSimulatedCSV() {
+                    if (!this.diagnosticsResult || !this.diagnosticsResult.step9_audit_csv.data) return;
+                    const rows = this.diagnosticsResult.step9_audit_csv.data;
+                    if (rows.length === 0) return;
+
+                    const headers = [
+                        'SupplierName', 'PartName', 'SHIPDATE', 'INVNUM', 'Transfer Order',
+                        'PARTNUMBER', 'Pallet Number', 'MODEL', 'Plt', 'QTY', 'SUBINVENTORY',
+                        'Build Name', 'ETA', 'Time', 'shipper', 'Truck or Air', 'Ship to',
+                        'DN#', 'Remark', 'BOXID', 'BOXQTY', 'PACKID', 'PACKQTY', 'TRAYID', 'SERIAL'
+                    ];
+
+                    let csvContent = headers.join(',') + '\n';
+                    rows.forEach(r => {
+                        const line = [
+                            `"${r.SupplierName || ''}"`,
+                            `"${r.PartName || ''}"`,
+                            `"${r.SHIPDATE || ''}"`,
+                            `"${r.INVNUM || ''}"`,
+                            `"${r.TransferOrder || ''}"`,
+                            `"${r.PARTNUMBER || ''}"`,
+                            `"${r.PalletNumber || ''}"`,
+                            `"${r.MODEL || ''}"`,
+                            `"${r.Plt || '1'}"`,
+                            `"${r.QTY || ''}"`,
+                            `"${r.SUBINVENTORY || ''}"`,
+                            `"${r.BuildName || ''}"`,
+                            `""`, `""`, `""`,
+                            `"${r.TruckOrAir || 'Truck'}"`,
+                            `"${r.ShipTo || ''}"`,
+                            `""`, `""`,
+                            `"${r.BOXID || ''}"`,
+                            `"${r.BOXQTY || ''}"`,
+                            `"${r.PACKID || ''}"`,
+                            `"${r.PACKQTY || ''}"`,
+                            `""`, `""`
+                        ];
+                        csvContent += line.join(',') + '\n';
+                    });
+
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const filename = this.diagnosticsResult.audit.targetFilename || 'FCA_TEST_EXPORT.csv';
+                    link.href = URL.createObjectURL(blob);
+                    link.setAttribute('download', filename);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                },
+
+                getStepTroubleshooting(stepNum) {
+                    if (!stepNum) return null;
+                    return this.troubleshootingGuide[Number(stepNum)] || null;
+                },
+
+                selectStepFromModal(stepNum) {
+                    this.showAllTroubleshootingModal = false;
+                    const targetNode = this.flowNodes.find(n => n.stepNum === Number(stepNum));
+                    if (targetNode) {
+                        this.selectedNodeId = String(targetNode.id || targetNode.stepNum);
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

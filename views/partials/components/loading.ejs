@@ -1,0 +1,22 @@
+<!-- Global Loading Overlay Component -->
+<div v-if="isLoading" class="loading-overlay">
+    <div class="loading-content">
+        <div v-if="loadingType === 'spinner'" class="spinner"></div>
+        <div v-else-if="loadingType === 'dots'" class="dots-loader">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+        <div v-else-if="loadingType === 'bars'" class="bars-loader">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </div>
+
+        <div style="font-size: 24px; margin-bottom: 15px;">⏳</div>
+        <div style="font-size: 18px; margin-bottom: 10px;">กำลังโหลด...</div>
+        <div style="font-size: 14px; opacity: 0.8;">{{ loadingMessage }}</div>
+    </div>
+</div>

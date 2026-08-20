@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <%- include('../../partials/script') %>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased font-sans">
+    <%- include('../../partials/header') %>
+
+    <div id="vue-app" class="w-full px-4 sm:px-6 lg:px-8 py-5 pb-28" v-cloak>
+        
+        <!-- Header -->
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 pb-4 border-b border-slate-200">
+            <div>
+                <div class="flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white text-xl shadow-md">
+                        🔄
+                    </span>
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                            FCA Flex Shipment Integration Architecture
+                            <span class="text-xs bg-purple-100 text-purple-800 font-semibold px-2.5 py-0.5 rounded-full border border-purple-300">
+                                Vue2-flow Architecture Spec
+                            </span>
+                        </h1>
+                        <p class="text-slate-550 text-xs mt-0.5">
+                            ผังโครงสร้างการทำงานแบบโต้ตอบ (Interactive Flow), การเชื่อมโยงตารางฐานข้อมูล และข้อกำหนดรูปแบบไฟล์ 25 คอลัมน์
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <div class="flex items-center flex-wrap gap-2 text-xs">
+                <a href="/debug-fca" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3.5 py-2 rounded-lg shadow-sm transition flex items-center gap-1.5">
+                    <span>⚡</span> เปิด Vue2-flow Debugger
+                </a>
+                <a href="/debug-fca-advanced" class="bg-white hover:bg-slate-100 text-slate-700 font-medium px-3 py-2 rounded-lg border border-slate-300 shadow-sm transition flex items-center gap-1.5">
+                    <span>📊</span> โหมด Batch Analysis
+                </a>
+                <a href="/main_menu" class="bg-slate-800 hover:bg-slate-900 text-white font-medium px-3.5 py-2 rounded-lg shadow-sm transition flex items-center gap-1.5">
+                    ← เมนูหลัก
+                </a>
+            </div>
+        </div>
+
+        <!-- Key Differences Banner -->
+        <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-5 lg:p-6 rounded-2xl shadow-md mb-6">
+            <h2 class="text-sm font-bold text-purple-200 mb-3 flex items-center gap-2">
+                <span>💡</span> ข้อแตกต่างสำคัญระหว่างระบบ FCA (Flex) และ ACA (Carriage):
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                <div class="bg-white/10 p-3.5 rounded-xl border border-white/10">
+                    <span class="font-bold text-amber-300 block mb-1">1. การเชื่อมต่อฐานข้อมูลผลิต</span>
+                    <p class="text-purple-100 leading-relaxed">
+                        FCA เชื่อมต่อฐานข้อมูล <code>SGFCDB02/HITACHI02</code> (ตาราง <code>PROD_DATA</code> และ <code>PACK_HEADER</code>) โดยตรงด้วยรหัส <code>prod_lot</code> ไม่ต้องแปลงผ่านตาราง FGREC Box/Pack แบบ ACA
+                    </p>
+                </div>
+                <div class="bg-white/10 p-3.5 rounded-xl border border-white/10">
+                    <span class="font-bold text-amber-300 block mb-1">2. คอลัมน์ Build Name & Remark</span>
+                    <p class="text-purple-100 leading-relaxed">
+                        FCA ดึงค่าจาก <code>WMS.HIT_FGREC_DATA.remark</code> ไประบุในคอลัมน์ Build Name ส่วนคอลัมน์ Remark และ วันหมดอายุ (Expiry Date) ถูกปล่อยเป็นค่าว่าง
+                    </p>
+                </div>
+                <div class="bg-white/10 p-3.5 rounded-xl border border-white/10">
+                    <span class="font-bold text-amber-300 block mb-1">3. SFTP Account & Prefix</span>
+                    <p class="text-purple-100 leading-relaxed">
+                        FCA ใช้ Account <code>Belton</code> และคีย์ <code>Belton.ppk</code> โดยในโค้ดจะส่งเฉพาะ BPI Direct (รหัสไฟล์ S0005/Z0005) ส่วน PRB ถูกระงับการทำงานไว้ในสคริปต์
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Interactive Vue2-flow Canvas Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+            
+            <!-- Left 8 Cols: Vue2-flow Interactive Canvas -->
+            <div class="lg:col-span-8 flex flex-col">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex-grow flex flex-col">
+                    <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-150">
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                                <span>🗺️</span> FCA Pipeline Specification (Vue2-flow Interactive Map)
+                            </h2>
+                            <span class="text-[11px] text-slate-500 hidden sm:inline">(คลิกที่โหนดเพื่อดูคำสั่ง SQL, ความสัมพันธ์ของตาราง และรายละเอียด)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button @click="resetFlowPositions" title="จัดตำแหน่งเริ่มต้น" class="text-xs text-slate-500 hover:text-slate-800 font-medium px-2.5 py-1 bg-slate-100 rounded-lg hover:bg-slate-200 transition">
+                                ↺ จัดผังใหม่
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Vue2-flow Canvas -->
+                    <div class="relative w-full h-[580px] flex-grow rounded-xl overflow-hidden">
+                        <v-flow 
+                            ref="vflow"
+                            :nodes="flowNodes" 
+                            :conns="flowConns"
+                            :selected-node-id="selectedNodeId"
+                            :grid="true"
+                            :zoomable="true"
+                            :pannable="true"
+                            :draggable="true"
+                            @node-click="onNodeClick"
+                        >
+                            <!-- Custom Node Slot Template -->
+                            <template slot="node" slot-scope="{ node, selected }">
+                                <div 
+                                    :class="[
+                                        'rounded-xl border p-3 bg-white shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between cursor-pointer select-none',
+                                        selected ? 'border-indigo-600 ring-4 ring-indigo-100 shadow-md' : 'border-slate-200 hover:border-slate-400'
+                                    ]"
+                                    :style="{ width: (node.width || 250) + 'px', minHeight: (node.height || 110) + 'px' }"
+                                >
+                                    <!-- Node Header -->
+                                    <div class="flex items-start justify-between gap-1.5 mb-1.5">
+                                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                                            <div 
+                                                class="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 shadow-xs"
+                                                :style="{ backgroundColor: node.iconBg || '#f1f5f9', color: node.iconColor || '#334155' }"
+                                            >
+                                                {{ node.icon || '📌' }}
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <div class="flex items-center gap-1.5 flex-wrap">
+                                                    <div class="text-xs font-bold text-slate-800 leading-tight">
+                                                        {{ node.name }}
+                                                    </div>
+                                                    <span 
+                                                        v-if="node.isCustom" 
+                                                        title="ขั้นตอนนี้ถูกเพิ่มเติมนอกเหนือจาก Flow ปกติของ Source Code"
+                                                        class="text-[7.5px] font-extrabold px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-700 border border-purple-300 shrink-0 font-mono tracking-tight flex items-center gap-0.5"
+                                                    >
+                                                        <span>✨</span>CUSTOM
+                                                    </span>
+                                                </div>
+                                                <div class="text-[10px] text-slate-400 truncate mt-0.5 font-mono">
+                                                    {{ node.tableName }}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Step Badge -->
+                                        <span class="text-[9px] font-bold px-2 py-0.5 rounded-full border bg-purple-50 text-purple-700 border-purple-200 shrink-0">
+                                            Step {{ node.stepNum }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Node Footer / Details Preview -->
+                                    <div class="text-[10px] text-slate-600 bg-slate-50 rounded-lg px-2 py-1 border border-slate-100 flex items-center justify-between mt-auto font-mono">
+                                        <span class="text-slate-500 truncate max-w-[150px]">{{ node.funPhp || node.sublabel }}</span>
+                                        <span class="text-indigo-600 text-[10px] font-bold">🔍 ดูสเปก</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </v-flow>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right 4 Cols: Step Specification Drawer Panel -->
+            <div class="lg:col-span-4 flex flex-col">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 lg:p-5 flex-grow flex flex-col max-h-[650px] overflow-y-auto custom-scrollbar">
+                    
+                    <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-150">
+                        <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <span>📖</span> Step Specification (ข้อกำหนด)
+                        </h2>
+                        <span v-if="activeStep" class="text-xs font-mono bg-purple-100 text-purple-800 font-bold px-2.5 py-0.5 rounded-lg border border-purple-200">
+                            Step {{ activeStep.stepNum }}
+                        </span>
+                    </div>
+
+                    <!-- When a step is selected -->
+                    <div v-if="activeStep" class="space-y-4 text-xs">
+                        
+                        <!-- Step Title & Description -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <div class="flex items-center gap-2 flex-wrap min-w-0">
+                                    <span class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                                        <span>{{ activeStep.icon }}</span> {{ activeStep.name }}
+                                    </span>
+                                    <span 
+                                        v-if="activeStep.isCustom" 
+                                        class="text-[9px] font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 border border-purple-300 flex items-center gap-1 shadow-2xs font-mono"
+                                    >
+                                        <span>✨</span> CUSTOM (เพิ่มเติมนอกเหนือจาก Flow ปกติ)
+                                    </span>
+                                </div>
+                            </div>
+                            <p class="text-slate-600 text-[11.5px] leading-relaxed mt-1">{{ activeStep.description }}</p>
+                        </div>
+
+                        <!-- Database & PHP Function Info -->
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5 font-mono text-[11px]">
+                            <div class="flex items-center justify-between">
+                                <span class="text-slate-500 font-bold">Database:</span>
+                                <span class="text-slate-800 font-semibold bg-white px-2 py-0.5 rounded border border-slate-200">{{ activeStep.database }}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-slate-500 font-bold">Primary Table:</span>
+                                <span class="text-indigo-700 font-semibold">{{ activeStep.tableName }}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-slate-500 font-bold">Legacy Function:</span>
+                                <span class="text-emerald-700 font-semibold">{{ activeStep.funPhp }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Key Table Relationships & Fields -->
+                        <div>
+                            <span class="font-bold text-slate-700 flex items-center gap-1 mb-1.5">
+                                <span>🔗</span> ตารางและฟิลด์ที่เกี่ยวข้อง:
+                            </span>
+                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5 text-[11px]">
+                                <div v-for="(item, idx) in activeStep.fields" :key="idx" class="flex items-start gap-2">
+                                    <span class="text-indigo-500">•</span>
+                                    <div>
+                                        <code class="font-bold text-indigo-700 bg-white px-1.5 py-0.5 rounded border border-slate-200 text-[10.5px]">{{ item.field }}</code>:
+                                        <span class="text-slate-600">{{ item.desc }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- RAW SQL Template -->
+                        <div v-if="activeStep.sql">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="font-bold text-slate-700 flex items-center gap-1">
+                                    <span>⚙️</span> SQL Query Template:
+                                </span>
+                                <button 
+                                    @click="copyText(activeStep.sql)"
+                                    class="bg-slate-800 hover:bg-slate-700 text-white text-[10px] px-2 py-0.5 rounded transition font-mono"
+                                >
+                                    คัดลอก SQL
+                                </button>
+                            </div>
+                            <pre class="bg-slate-900 text-emerald-400 p-3 rounded-xl font-mono text-[10.5px] overflow-x-auto whitespace-pre-wrap max-h-40 custom-scrollbar border border-slate-800 select-all">{{ activeStep.sql }}</pre>
+                        </div>
+
+                        <!-- Business Rule / Note Alert -->
+                        <div class="bg-purple-50 text-purple-900 p-3 rounded-xl border border-purple-200 text-[11px] leading-relaxed">
+                            <span class="font-bold block mb-0.5">📌 Business Rule:</span>
+                            {{ activeStep.rule }}
+                        </div>
+
+                    </div>
+
+                    <!-- Empty state -->
+                    <div v-else class="flex-grow flex flex-col items-center justify-center text-center p-6 text-slate-400">
+                        <span class="text-4xl mb-2">👆</span>
+                        <span class="text-xs font-semibold text-slate-600">คลิกที่โหนดบน Flowchart</span>
+                        <span class="text-[11px] text-slate-400 mt-1">เพื่อเปิดดูรายละเอียดและคำสั่ง SQL ของแต่ละขั้นตอน</span>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 25 Columns Specification Table -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <span>📋</span> ตารางข้อกำหนด 25 คอลัมน์ในไฟล์ CSV (FCA Flex Output Format)
+                    </h2>
+                    <p class="text-slate-500 text-xs mt-0.5">
+                        โครงสร้างมาตรฐานไฟล์ CSV ที่ถูกส่งมอบเข้า SFTP ของทาง Western Digital
+                    </p>
+                </div>
+                <div class="text-xs font-mono text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+                    Format: <span class="text-emerald-700 font-bold">{Prefix}_{Type}_{Date}_000000_BEL_FLEX_{Model}_{Running}.csv</span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto border border-slate-200 rounded-xl custom-scrollbar">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead class="bg-slate-800 text-white text-[11px]">
+                        <tr>
+                            <th class="px-4 py-2.5 font-medium border-r border-slate-700">ลำดับ</th>
+                            <th class="px-4 py-2.5 font-medium border-r border-slate-700">ชื่อหัวข้อคอลัมน์ (Header)</th>
+                            <th class="px-4 py-2.5 font-medium border-r border-slate-700">แหล่งที่มาข้อมูลในโปรแกรม (Data Source / Logic)</th>
+                            <th class="px-4 py-2.5 font-medium">ตัวอย่างค่า</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 font-mono text-[11px]">
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">1</td><td class="px-4 py-2 font-bold text-slate-800 border-r border-slate-100">SupplierName</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">ค่าคงที่ <code>'Belton'</code></td><td class="px-4 py-2 text-slate-500">Belton</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">2</td><td class="px-4 py-2 font-bold text-slate-800 border-r border-slate-100">PartName</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">ค่าคงที่ <code>'FCA'</code></td><td class="px-4 py-2 text-slate-500">FCA</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">3</td><td class="px-4 py-2 font-bold text-slate-800 border-r border-slate-100">SHIPDATE</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">วันที่จาก <code>WMS.HIT_SHIP_CONFIRM</code> (ฟอร์แมต <code>d-M-Y</code>)</td><td class="px-4 py-2 text-blue-700 font-semibold">18-August-2026</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">4</td><td class="px-4 py-2 font-bold text-emerald-700 border-r border-slate-100">INVNUM</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">หมายเลข DO (DO Number)</td><td class="px-4 py-2 text-emerald-700 font-bold">HGBC2608034</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">5</td><td class="px-4 py-2 font-bold text-slate-800 border-r border-slate-100">Transfer Order</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">หมายเลข PO (<code>WMS.SHIPMENTPLAN_DATA.po_no</code>)</td><td class="px-4 py-2 text-slate-700">PO-45001234</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">6</td><td class="px-4 py-2 font-bold text-slate-800 border-r border-slate-100">PARTNUMBER</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">Customer PN (<code>WMS.SHIPMENTPLAN_DATA.customer_pn</code>)</td><td class="px-4 py-2 text-slate-700">0B32145</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">7</td><td class="px-4 py-2 font-bold text-slate-800 border-r border-slate-100">Pallet Number</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">หมายเลขพาเลท (<code>WMS.HIT_SHIP_CONFIRM.pallet_no</code>)</td><td class="px-4 py-2 text-slate-700">FCAVFA826081701</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">8</td><td class="px-4 py-2 font-bold text-indigo-700 border-r border-slate-100">MODEL</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">ชื่อรุ่นผลิตภัณฑ์ (<code>WMS.SHIPMENTPLAN_DATA.model_name</code>)</td><td class="px-4 py-2 text-indigo-700 font-bold">CARA_2_4_2D</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">9</td><td class="px-4 py-2 font-bold text-slate-800 border-r border-slate-100">Plt</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">ค่าคงที่ <code>'1'</code></td><td class="px-4 py-2 text-slate-500">1</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">10</td><td class="px-4 py-2 font-bold text-slate-800 border-r border-slate-100">QTY</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">จำนวนรวมบนพาเลท (<code>WMS.HIT_PALLET_DATA.qty_pallet</code>)</td><td class="px-4 py-2 text-slate-800 font-semibold">10800</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">11</td><td class="px-4 py-2 font-bold text-slate-800 border-r border-slate-100">SUBINVENTORY</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans"><code>'RMCOI-T2'</code> สำหรับ Direct, ค่าว่างสำหรับ Hub</td><td class="px-4 py-2 text-slate-500">RMCOI-T2 / -</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">12</td><td class="px-4 py-2 font-bold text-emerald-700 border-r border-slate-100">Build Name</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">หมายเหตุรุ่นจาก <code>WMS.HIT_FGREC_DATA.remark</code></td><td class="px-4 py-2 text-emerald-700 font-semibold">FLEX_BUILD_REV2</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">13-15</td><td class="px-4 py-2 font-bold text-slate-800 border-r border-slate-100">ETA, Time, shipper</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">ค่าว่าง (<code>''</code>)</td><td class="px-4 py-2 text-slate-400">-</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">16</td><td class="px-4 py-2 font-bold text-slate-800 border-r border-slate-100">Truck or Air</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">ค่าคงที่ <code>'Truck'</code></td><td class="px-4 py-2 text-slate-600">Truck</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">17</td><td class="px-4 py-2 font-bold text-slate-800 border-r border-slate-100">Ship to</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">ปลายทางจาก Master (<code>WMS.HIT_SHIP_TO_MASTER.ship_to</code>)</td><td class="px-4 py-2 text-slate-700 font-semibold">VMI-Hub</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">18-19</td><td class="px-4 py-2 font-bold text-slate-800 border-r border-slate-100">DN#, Remark</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">ค่าว่าง (<code>''</code>) - ไม่มีส่งออกวันหมดอายุของ Flex</td><td class="px-4 py-2 text-slate-400">-</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">20</td><td class="px-4 py-2 font-bold text-slate-800 border-r border-slate-100">BOXID</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans"><code>{DO}||{Box Qty}||{Box Ship Name}</code></td><td class="px-4 py-2 text-slate-600 text-[10px]">HGBC2608034||100||BOX-A1</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">21</td><td class="px-4 py-2 font-bold text-slate-800 border-r border-slate-100">BOXQTY</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">จำนวนชิ้นงานในกล่อง (<code>qty_boxs</code>)</td><td class="px-4 py-2 text-slate-700">100</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">22</td><td class="px-4 py-2 font-bold text-purple-700 border-r border-slate-100">PACKID</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">รหัสการแพ็กจาก <code>HITACHI.PROD_DATA.pack_id</code></td><td class="px-4 py-2 text-purple-700 font-bold">PK-2026-001</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">23</td><td class="px-4 py-2 font-bold text-purple-700 border-r border-slate-100">PACKQTY</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">ขนาดบรรจุจาก <code>HITACHI.PACK_HEADER.pack_size</code></td><td class="px-4 py-2 text-purple-700 font-bold">100</td></tr>
+                        <tr class="hover:bg-slate-50"><td class="px-4 py-2 text-slate-400 border-r border-slate-100">24-25</td><td class="px-4 py-2 font-bold text-slate-800 border-r border-slate-100">TRAYID, SERIAL</td><td class="px-4 py-2 text-slate-600 border-r border-slate-100 font-sans">ค่าว่าง (<code>''</code>)</td><td class="px-4 py-2 text-slate-400">-</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Vue App Logic -->
+    <script>
+        new Vue({
+            el: '#vue-app',
+            data: {
+                selectedNodeId: '1',
+                activeStep: null,
+
+                // Flow Nodes Specification
+                flowNodes: [
+                    {
+                        id: '1',
+                        stepNum: 1,
+                        name: '1. ตรวจสอบ DO ประจำวัน',
+                        sublabel: 'WMS.HIT_SHIP_CONFIRM',
+                        tableName: 'WMS.HIT_SHIP_CONFIRM',
+                        database: 'BITINTRA_REAL (WMS)',
+                        funPhp: 'fun.php: getDO($date)',
+                        icon: '📅',
+                        iconBg: '#eff6ff',
+                        iconColor: '#2563eb',
+                        x: 35,
+                        y: 40,
+                        width: 250,
+                        height: 110,
+                        description: 'ดึงรายการ DO ที่มีการยืนยันการจัดส่ง (type="PACK") ในวันที่กำหนด และยังไม่เคยถูกบันทึกประวัติการส่งลงใน LOG_FTP',
+                        rule: 'ต้องเป็นสถานะยืนยัน PACK และต้องตัด DO ที่เคยส่งสำเร็จในตาราง HIT_TRANSFER_DATA_LOG_FTP ออก เพื่อป้องกันส่งซ้ำ',
+                        fields: [
+                            { field: 's.do', desc: 'หมายเลข DO จัดส่ง' },
+                            { field: 's.plan_id', desc: 'รหัสแผนงานการจัดส่ง' },
+                            { field: 'p.ship_to_location', desc: 'สถานที่จัดส่ง (Direct / Hub)' }
+                        ],
+                        sql: `SELECT s.do, s.plan_id, s.pallet_no, s.date, s.type, p.ship_to_location, p.customer_pn\nFROM WMS.HIT_SHIP_CONFIRM s \nINNER JOIN WMS.lrv_wms_check_confirm_log l ON s.plan_id = l.plan_id\nINNER JOIN WMS.SHIPMENTPLAN_DATA p ON s.plan_id = p.plan_id \nWHERE DATE(s.date) = ? AND s.type = 'PACK'\n  AND s.do NOT IN (SELECT do_no FROM WMS.HIT_TRANSFER_DATA_LOG_FTP)\nGROUP BY s.do, p.ship_to_location`
+                    },
+                    {
+                        id: '2',
+                        stepNum: 2,
+                        name: '2. ตรวจสอบ Prefix Master',
+                        sublabel: 'WMS.HIT_SHIP_TO_MASTER',
+                        tableName: 'WMS.HIT_SHIP_TO_MASTER',
+                        database: 'BITINTRA_REAL (WMS)',
+                        funPhp: 'fun.php: get_prefix_type()',
+                        icon: '🏷️',
+                        iconBg: '#f0fdf4',
+                        iconColor: '#16a34a',
+                        x: 345,
+                        y: 40,
+                        width: 250,
+                        height: 110,
+                        description: 'ตรวจสอบ 4 ตัวอักษรแรกของ DO เพื่อระบุประเภทการขนส่ง (BPI / PRB) และรหัสคลังสินค้าปลายทางของ WDC',
+                        rule: 'FCA รองรับเฉพาะ Prefix ประเภท BPI Direct (รหัสไฟล์ S0005/Z0005) ส่วน PRB ถูก Disable ไว้ในระบบต้นฉบับ',
+                        fields: [
+                            { field: 'prefix', desc: 'รหัส 4 ตัวแรกของ DO (เช่น HGBC, HGSC)' },
+                            { field: 'ship_to', desc: 'รหัสคลังสินค้าปลายทาง (เช่น VMI-Hub)' },
+                            { field: 'type', desc: 'ประเภทการส่งมอบ (BPI / PRB)' }
+                        ],
+                        sql: `SELECT prefix, ship_to, type, status \nFROM WMS.HIT_SHIP_TO_MASTER \nWHERE prefix = ? AND status = 'active'`
+                    },
+                    {
+                        id: '3',
+                        stepNum: 3,
+                        name: '3. ดึงลอตผลิต WMS Match',
+                        sublabel: 'SHIPMENTPALLET_BOX_PROD_HTC',
+                        tableName: 'WMS.SHIPMENTPALLET_BOX_PROD_HTC',
+                        database: 'BITINTRA_REAL (WMS)',
+                        funPhp: 'fun.php: getProdWMS($DO_lot)',
+                        icon: '🔗',
+                        iconBg: '#fdf4ff',
+                        iconColor: '#9333ea',
+                        x: 655,
+                        y: 40,
+                        width: 250,
+                        height: 110,
+                        description: 'เชื่อมโยง DO ไปยังแผนงานจัดส่ง เพื่อดึง Customer PN, PO, Store Lot, Production Lot และจำนวนกล่อง',
+                        rule: 'หนึ่ง DO สามารถมีได้หลาย Production Lot และหลาย Store Lot โดยระบบจะดึงรหัส prod_lot ทั้งหมดไปค้นหาต่อใน Hitachi DB',
+                        fields: [
+                            { field: 'd.do_no', desc: 'หมายเลข DO' },
+                            { field: 'p.customer_pn', desc: 'Part Number ฝั่งลูกค้า' },
+                            { field: 'b.prod_lot', desc: 'รหัส Production Lot สำหรับเชื่อม Hitachi DB' },
+                            { field: 'b.qty', desc: 'จำนวนกล่อง (qty_boxs)' }
+                        ],
+                        sql: `SELECT d.plan_id, d.do_no, p.customer_pn, p.item_no, p.model_name, p.qty as plan_qty, \n       b.store_lot, b.prod_lot, b.qty as qty_boxs, p.po_no\nFROM (WMS.SHIPMENTDO_DATA d \n      INNER JOIN WMS.SHIPMENTPLAN_DATA p ON d.plan_id = p.plan_id)\nINNER JOIN WMS.SHIPMENTPALLET_BOX_PROD_HTC b ON d.plan_id = b.plan_id\nWHERE d.do_no = ?\nORDER BY d.do_no, b.store_lot, b.prod_lot`
+                    },
+                    {
+                        id: '4',
+                        stepNum: 4,
+                        name: '4. ยืนยันจัดส่ง & พาเลท',
+                        sublabel: 'WMS.HIT_PALLET_DATA',
+                        tableName: 'WMS.HIT_SHIP_CONFIRM / PALLET',
+                        database: 'BITINTRA_REAL (WMS)',
+                        funPhp: 'fun.php: getShip_confirm_data()',
+                        icon: '🚚',
+                        iconBg: '#fff7ed',
+                        iconColor: '#ea580c',
+                        x: 965,
+                        y: 40,
+                        width: 250,
+                        height: 110,
+                        description: 'ตรวจสอบข้อมูลหมายเลขพาเลท (Pallet Running), วันที่ส่งมอบ (Ship Date) และชื่อเรียกกล่องสินค้า',
+                        rule: 'ต้องจับคู่กับ running_pallet ที่สถานะ Active และนำฟิลด์ box_ship_name มาประกอบเป็น BOXID',
+                        fields: [
+                            { field: 's.pallet_no', desc: 'Pallet Running Number' },
+                            { field: 's.date', desc: 'วันที่ยืนยันจัดส่ง (Format d-M-Y)' },
+                            { field: 's.box_ship_name', desc: 'ชื่อเฉพาะของกล่องนำมารวมเป็น BOXID' }
+                        ],
+                        sql: `SELECT s.pallet_no as pallet_running, s.box_detail, \n       DATE_FORMAT(s.date, '%d-%M-%Y') as ship_date, \n       d.qty_pallet, s.prod_lot, s.box_ship_name\nFROM WMS.HIT_SHIP_CONFIRM AS s\nINNER JOIN WMS.HIT_PALLET_DATA d ON s.pallet_no = d.running_pallet\nWHERE s.prod_lot IN (?) AND s.type = 'pack' AND d.status = 'Active'`
+                    },
+                    {
+                        id: '5',
+                        stepNum: 5,
+                        name: '5. บาร์โค้ดการแพ็ก Hitachi',
+                        sublabel: 'HITACHI.PROD_DATA',
+                        tableName: 'HITACHI.PROD_DATA',
+                        database: 'SGFCDB02 / HITACHI02',
+                        funPhp: 'fun.php: getPack($Prod_lot)',
+                        icon: '📦',
+                        iconBg: '#eef2ff',
+                        iconColor: '#4f46e5',
+                        x: 965,
+                        y: 215,
+                        width: 250,
+                        height: 110,
+                        description: 'เชื่อมโยงฐานข้อมูลการผลิตฝั่ง Hitachi เพื่อดึงหมายเลข Pack ID บรรจุภัณฑ์ที่จับคู่กับ Production Lot',
+                        rule: 'FCA ต่อตรงเข้า SGFCDB02 (HITACHI02) ด้วย prod_lot โดยระบบจะ Group Unique (prod_lot, pack_id)',
+                        fields: [
+                            { field: 'p.prod_lot', desc: 'รหัส Production Lot' },
+                            { field: 'p.pack_id', desc: 'หมายเลข Pack ID บรรจุภัณฑ์' }
+                        ],
+                        sql: `SELECT p.prod_lot, p.pack_id \nFROM HITACHI.PROD_DATA p\nWHERE p.prod_lot IN (?)`
+                    },
+                    {
+                        id: '6',
+                        stepNum: 6,
+                        name: '6. ตรวจสอบ Pack Header',
+                        isCustom: true,
+                        sublabel: 'HITACHI.PACK_HEADER',
+                        tableName: 'HITACHI.PACK_HEADER',
+                        database: 'SGFCDB02 / HITACHI02',
+                        funPhp: 'Custom Validation Rule',
+                        icon: '✨',
+                        iconBg: '#faf5ff',
+                        iconColor: '#9333ea',
+                        x: 655,
+                        y: 215,
+                        width: 250,
+                        height: 110,
+                        description: 'ตรวจสอบความสมบูรณ์ของ Pack ID ทุกตัวในตาราง PACK_HEADER และเช็คสถานะ ship_status = "Active"',
+                        rule: 'เพิ่มเติมนอกเหนือจาก Flow ปกติ: ตรวจสอบว่าทุก Pack ID มีหัวตารางครบถ้วน และสถานะต้องเป็น Active เพื่อป้องกันข้อผิดพลาดในการส่งมอบ',
+                        fields: [
+                            { field: 'pack_id', desc: 'หมายเลข Pack ID' },
+                            { field: 'ship_status', desc: 'สถานะการจัดส่ง (ต้องเป็น Active)' },
+                            { field: 'pack_size', desc: 'ขนาดบรรจุภัณฑ์' }
+                        ],
+                        sql: `SELECT pack_id, item_no, prod_code, pack_size, ship_status\nFROM HITACHI.PACK_HEADER\nWHERE pack_id IN (?)`
+                    },
+                    {
+                        id: '7',
+                        stepNum: 7,
+                        name: '7. หมายเหตุ Build Name',
+                        sublabel: 'WMS.HIT_FGREC_DATA',
+                        tableName: 'WMS.HIT_FGREC_DATA',
+                        database: 'BITINTRA_REAL (WMS)',
+                        funPhp: 'fun.php: getremark_in_wms_hit_fgrec_data()',
+                        icon: '📝',
+                        iconBg: '#f0fdfa',
+                        iconColor: '#0d9488',
+                        x: 345,
+                        y: 215,
+                        width: 250,
+                        height: 110,
+                        description: 'ดึงข้อความหมายเหตุชิ้นงานจากฟิลด์ remark เพื่อนำไประบุลงในคอลัมน์ Build Name ของไฟล์ CSV',
+                        rule: 'ใน FCA คอลัมน์ Remark ใน CSV ถูกกำหนดเป็นค่าว่าง ส่วนฟิลด์ remark ใน FGREC จะนำไปใส่ใน Build Name',
+                        fields: [
+                            { field: 'prod_lot', desc: 'รหัส Production Lot' },
+                            { field: 'remark', desc: 'หมายเหตุชิ้นงานระบุเป็น Build Name ใน CSV' }
+                        ],
+                        sql: `SELECT prod_lot, remark \nFROM WMS.HIT_FGREC_DATA \nWHERE prod_lot IN (?)`
+                    },
+                    {
+                        id: '8',
+                        stepNum: 8,
+                        name: '8. ชื่อรุ่น Oracle Master',
+                        sublabel: 'COMMON_ORACLE_ITEMMASTER',
+                        tableName: 'MASTER.COMMON_ORACLE_ITEMMASTER_ORG',
+                        database: 'BITINTRA_REAL (MASTER)',
+                        funPhp: 'fun.php: get_model_name($bit_pn)',
+                        icon: '🏛️',
+                        iconBg: '#fefce8',
+                        iconColor: '#ca8a04',
+                        x: 35,
+                        y: 215,
+                        width: 250,
+                        height: 110,
+                        description: 'ตรวจสอบความสม่ำเสมอของ Customer PN และสืบค้นชื่อ Model Name จาก Oracle Item Master โดยตัดวงเล็บออก',
+                        rule: 'หาก Customer PN มีหลายรุ่นผสมกันใน DO เดียวกัน ให้ใช้ชื่อไฟล์เป็น "All" มิฉะนั้นให้ตัดสตริงก่อนวงเล็บเปิด "("',
+                        fields: [
+                            { field: 'item_no', desc: 'Bit PN ของชิ้นงาน' },
+                            { field: 'model_name', desc: 'ชื่อรุ่นผลิตภัณฑ์จาก Oracle Master' }
+                        ],
+                        sql: `SELECT item_no, model_name \nFROM MASTER.COMMON_ORACLE_ITEMMASTER_ORG \nWHERE item_no = ?`
+                    },
+                    {
+                        id: '9',
+                        stepNum: 9,
+                        name: '9. ตรวจสอบยอดรวม & CSV',
+                        sublabel: 'Qty Audit & 25 Cols Spec',
+                        tableName: 'Simulation Engine',
+                        database: 'Memory & File Generator',
+                        funPhp: 'fun.php: gen_data_and_send_file()',
+                        icon: '⚖️',
+                        iconBg: '#ecfdf5',
+                        iconColor: '#059669',
+                        x: 35,
+                        y: 390,
+                        width: 250,
+                        height: 110,
+                        description: 'เปรียบเทียบยอดรวม Plan QTY กับ Scanned Pack QTY และสร้างแถวข้อมูล CSV ตามโครงสร้าง 25 คอลัมน์',
+                        rule: 'ยอดรวม Plan QTY ใน WMS ต้องเท่ากับยอดรวม Pack Size ใน Hitachi DB ทุกชิ้น หากไม่ตรงระบบจะแจ้งเตือน Quantity Mismatch',
+                        fields: [
+                            { field: 'sum_qty', desc: 'ผลรวม Pack Size ทั้งหมด' },
+                            { field: 'total_qty', desc: 'ผลรวม Plan QTY จาก WMS' },
+                            { field: 'running_no', desc: 'ลำดับ Running 3 หลัก (001 - 999)' }
+                        ],
+                        sql: `SELECT running_transfer FROM WMS.HIT_RUNNING_TRANSFER_CUSTOMER_FTP LIMIT 1`
+                    },
+                    {
+                        id: '10',
+                        stepNum: 10,
+                        name: '10. การส่ง SFTP & บันทึก Log',
+                        sublabel: 'WMS.HIT_TRANSFER_DATA_LOG',
+                        tableName: 'WMS.HIT_TRANSFER_DATA_LOG_FTP',
+                        database: 'WMS & SFTP Customer',
+                        funPhp: 'fun.php: Send_to_customer()',
+                        icon: '🚀',
+                        iconBg: '#f8fafc',
+                        iconColor: '#475569',
+                        x: 345,
+                        y: 390,
+                        width: 250,
+                        height: 110,
+                        description: 'ตรวจสอบการเชื่อมต่อ SFTP (sftp2.wdc.com / Belton.ppk) และจำลองการเพิ่ม Counter และบันทึกประวัติการส่ง',
+                        rule: 'หลังส่งไฟล์ขึ้น SFTP สำเร็จ ต้องอัปเดต Counter ใน HIT_RUNNING_TRANSFER_CUSTOMER_FTP และบันทึก Log ใน HIT_TRANSFER_DATA_LOG_FTP',
+                        fields: [
+                            { field: 'do_no', desc: 'หมายเลข DO ที่ถูกส่งมอบแล้ว' },
+                            { field: 'dt_do_transfer', desc: 'วันและเวลาที่ส่งมอบขึ้น SFTP' }
+                        ],
+                        sql: `INSERT INTO WMS.HIT_TRANSFER_DATA_LOG_FTP (do_no, dt_do_transfer) VALUES (?, NOW())`
+                    }
+                ],
+
+                // Flow Connections
+                flowConns: [
+                    { id: 'c1-2', source: '1', target: '2', status: 'default', animated: false },
+                    { id: 'c2-3', source: '2', target: '3', status: 'default', animated: false },
+                    { id: 'c3-4', source: '3', target: '4', status: 'default', animated: false },
+                    { id: 'c4-5', source: '4', target: '5', status: 'default', animated: false },
+                    { id: 'c5-6', source: '5', target: '6', status: 'default', animated: false },
+                    { id: 'c6-7', source: '6', target: '7', status: 'default', animated: false },
+                    { id: 'c7-8', source: '7', target: '8', status: 'default', animated: false },
+                    { id: 'c8-9', source: '8', target: '9', status: 'default', animated: false },
+                    { id: 'c9-10', source: '9', target: '10', status: 'default', animated: false }
+                ]
+            },
+
+            mounted() {
+                this.activeStep = this.flowNodes[0];
+            },
+
+            methods: {
+                onNodeClick(node) {
+                    this.selectedNodeId = node.id;
+                    this.activeStep = node;
+                },
+
+                copyText(text) {
+                    if (!text) return;
+                    navigator.clipboard.writeText(text).then(() => {
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'success',
+                            title: 'คัดลอก SQL แล้ว',
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                    });
+                },
+
+                resetFlowPositions() {
+                    const defaultPositions = [
+                        { id: '1', x: 35, y: 40 },
+                        { id: '2', x: 345, y: 40 },
+                        { id: '3', x: 655, y: 40 },
+                        { id: '4', x: 655, y: 215 },
+                        { id: '5', x: 345, y: 215 },
+                        { id: '6', x: 35, y: 215 },
+                        { id: '7', x: 35, y: 390 },
+                        { id: '8', x: 345, y: 390 },
+                        { id: '9', x: 655, y: 390 }
+                    ];
+                    this.flowNodes.forEach(n => {
+                        const def = defaultPositions.find(p => p.id === n.id);
+                        if (def) {
+                            n.x = def.x;
+                            n.y = def.y;
+                        }
+                    });
+                    if (this.$refs.vflow) {
+                        this.$refs.vflow.resetView();
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

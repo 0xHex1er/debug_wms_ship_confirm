@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My EJS and Vue App</title>
+    <%- include('../partials/script') %>
+</head>
+<body>
+    <%- include('../partials/header') %>
+    <div id="app">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-12">
+                    <h1>{{ title }}</h1>
+                    <p>{{ message }}</p>
+                </div>
+            </div>
+        </div>    
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                title: 'Welcome to My EJS and Vue App',
+                message: 'This is a simple example of using EJS with Vue.js.'
+            }
+        });
+    </script>
+</body>
+</html>

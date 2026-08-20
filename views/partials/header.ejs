@@ -1,0 +1,201 @@
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- Navbar with Obsidian Crimson Executive Glassmorphism -->
+<nav class="bg-slate-950/95 backdrop-blur-xl border-b border-rose-900/40 shadow-2xl relative z-40">
+  <!-- Glowing Bottom Accent Line -->
+  <div class="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-rose-500/80 to-transparent"></div>
+
+  <div class="w-full px-4 sm:px-6 lg:px-8 py-2.5">
+    <div class="flex items-center justify-between gap-4">
+      
+      <!-- Left: Logo & System Identity -->
+      <div class="flex items-center gap-3">
+        <a href="/main_menu" class="flex items-center gap-2.5 group">
+          <div class="bg-white/95 p-1 px-2 rounded-lg border border-white/20 shadow-xs group-hover:scale-105 transition-transform duration-200">
+            <img src="../../../public/img/home/belton-logo2.jpg" alt="Belton Technology" class="h-6 sm:h-7 w-auto object-contain">
+          </div>
+        </a>
+
+        <div class="hidden sm:flex items-center gap-2 pl-3 border-l border-slate-800">
+          <div class="flex items-center gap-1.5 bg-rose-950/60 text-rose-300 border border-rose-800/60 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide">
+            <span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
+            <span>Debug Shipment Confirm</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden inputs -->
+      <input type="hidden" id="username" name="username" value="<%= username %>">
+      <input type="hidden" id="isLogin" name="isLogin" value="<%= isLogin %>">
+
+      <% if (isLogin) { %>
+        <div class="flex items-center gap-2 sm:gap-3">
+          
+          <!-- Direct High-Contrast Theme Switcher: Light / Dark Toggle -->
+          <div class="flex items-center bg-slate-900 p-0.5 sm:p-1 rounded-xl border border-slate-700/80 shadow-inner">
+            <button onclick="setTheme('light')" id="theme-btn-light"
+              class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer"
+              title="สลับเป็นโหมดสว่าง (Light Mode)">
+              <span>☀️</span>
+              <span class="hidden sm:inline">Light</span>
+            </button>
+            <button onclick="setTheme('dark')" id="theme-btn-dark"
+              class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer"
+              title="สลับเป็นโหมดมืด (Dark Mode)">
+              <span>🌙</span>
+              <span class="hidden sm:inline">Dark</span>
+            </button>
+          </div>
+
+          <!-- Desktop User Menu & Actions -->
+          <div id="desktop-menu" class="hidden md:flex items-center gap-3">
+            
+            <!-- User Profile Pill -->
+            <div class="flex items-center gap-2 bg-slate-900/90 text-slate-200 px-3 py-1.5 rounded-xl border border-slate-800 shadow-inner">
+              <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-rose-600 to-amber-500 flex items-center justify-center text-white text-[11px] font-bold shadow-xs">
+                <%= username ? username.charAt(0).toUpperCase() : 'U' %>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-xs font-semibold text-slate-100 leading-none">
+                  <%= username %>
+                </span>
+                <span class="text-[9px] text-emerald-400 flex items-center gap-1 leading-none mt-0.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Online
+                </span>
+              </div>
+            </div>
+
+            <!-- Logout Button -->
+            <button id="btn-logout"
+              class="bg-gradient-to-r from-rose-950/80 to-slate-900 hover:from-rose-600 hover:to-red-600 text-rose-300 hover:text-white font-bold px-3.5 py-1.5 rounded-xl text-xs border border-rose-800/60 hover:border-rose-500 shadow-sm hover:shadow-[0_0_15px_rgba(225,29,72,0.4)] transition-all duration-200 flex items-center gap-1.5"
+              type="button" onclick="logOut()">
+              <i class="bi bi-box-arrow-right text-xs"></i>
+              <span>Logout</span>
+            </button>
+          </div>
+
+          <!-- Mobile Menu Button -->
+          <button id="mobile-menu-btn"
+            class="md:hidden text-slate-300 hover:text-white bg-slate-900 p-2 rounded-xl border border-slate-800 transition" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16">
+              <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5" />
+            </svg>
+          </button>
+
+        </div>
+
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobile-menu"
+          class="hidden md:hidden absolute top-14 right-4 bg-slate-900/95 backdrop-blur-xl shadow-2xl rounded-2xl p-4 z-50 min-w-[220px] border border-slate-800">
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center gap-2.5 pb-3 border-b border-slate-800">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-rose-600 to-amber-500 flex items-center justify-center text-white text-xs font-bold">
+                <%= username ? username.charAt(0).toUpperCase() : 'U' %>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-xs font-bold text-white"><%= username %></span>
+                <span class="text-[10px] text-emerald-400 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Online
+                </span>
+              </div>
+            </div>
+            <button id="btn-logout-mobile"
+              class="w-full bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-md transition flex items-center justify-center gap-2"
+              type="button" onclick="logOut()">
+              <i class="bi bi-box-arrow-right"></i>
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+        <% } %>
+    </div>
+  </div>
+</nav>
+
+<script>
+  // High-Contrast Theme Switching Logic: 'light' vs 'dark' (obsidian)
+  function getAppTheme() {
+    let t = localStorage.getItem('app_theme') || 'dark';
+    if (t === 'obsidian' || t === 'midnight') t = 'dark';
+    return t;
+  }
+
+  function setTheme(themeKey) {
+    if (themeKey !== 'light' && themeKey !== 'dark') themeKey = 'dark';
+    localStorage.setItem('app_theme', themeKey);
+    applyThemeUI(themeKey);
+    window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme: themeKey } }));
+  }
+
+  function applyThemeUI(themeKey) {
+    if (themeKey === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+      if (document.body) document.body.setAttribute('data-theme', 'light');
+      
+      const lightBtn = document.getElementById('theme-btn-light');
+      const darkBtn = document.getElementById('theme-btn-dark');
+      if (lightBtn) {
+        lightBtn.className = "flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-extrabold bg-amber-400 text-slate-950 shadow-md transition-all duration-200 cursor-pointer";
+      }
+      if (darkBtn) {
+        darkBtn.className = "flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition-all duration-200 cursor-pointer";
+      }
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      if (document.body) document.body.setAttribute('data-theme', 'dark');
+
+      const lightBtn = document.getElementById('theme-btn-light');
+      const darkBtn = document.getElementById('theme-btn-dark');
+      if (darkBtn) {
+        darkBtn.className = "flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-extrabold bg-gradient-to-r from-rose-600 to-rose-700 text-white shadow-md transition-all duration-200 cursor-pointer";
+      }
+      if (lightBtn) {
+        lightBtn.className = "flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition-all duration-200 cursor-pointer";
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    // Init theme
+    const curTheme = getAppTheme();
+    applyThemeUI(curTheme);
+
+    // Mobile menu toggle
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    if (mobileMenuBtn && mobileMenu) {
+      mobileMenuBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        mobileMenu.classList.toggle('hidden');
+      });
+      document.addEventListener('click', function (e) {
+        if (!mobileMenu.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+          mobileMenu.classList.add('hidden');
+        }
+      });
+    }
+  });
+
+  function logOut() {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Confirm Logout',
+            text: "คุณต้องการออกจากระบบหรือไม่?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Logout',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = '/logout';
+            }
+        });
+    } else {
+        if (confirm("คุณต้องการออกจากระบบหรือไม่?")) {
+            window.location.href = '/logout';
+        }
+    }
+  }
+</script>

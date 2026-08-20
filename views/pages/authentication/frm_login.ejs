@@ -1,0 +1,193 @@
+<head>
+  <%- include('../../partials/script') %>
+    <style>
+      /* Hide header on login page */
+      nav {
+        display: none !important;
+      }
+    </style>
+</head>
+
+<body class="h-screen overflow-hidden relative font-sans bg-slate-950">
+  <!-- Full Screen Video Background -->
+  <video autoplay loop muted playsinline class="fixed inset-0 w-full h-full object-cover z-0 opacity-40 scale-105 filter saturate-150">
+    <source src="../../../public/img/login/debug.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+
+  <!-- Cinematic Dark Obsidian & Crimson Atmospheric Overlay -->
+  <div class="fixed inset-0 bg-gradient-to-tr from-slate-950 via-slate-950/85 to-rose-950/60 z-10 backdrop-blur-[3px]"></div>
+
+  <!-- Ambient Glowing Light Orbs -->
+  <div class="fixed top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-rose-600/20 rounded-full blur-3xl pointer-events-none z-10 animate-pulse"></div>
+  <div class="fixed bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none z-10"></div>
+
+  <div id="app-login" class="relative z-20 min-h-screen flex items-center justify-center px-4 py-8">
+    <!-- Login Card Container -->
+    <div class="w-full max-w-md">
+
+      <!-- Top Belton Logo -->
+      <div class="mb-6 flex justify-center">
+        <div class="bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/30 shadow-xl shadow-black/40 hover:scale-105 transition-transform duration-300">
+          <img src="../../../public/img/home/belton-logo2.jpg" alt="Belton Technology" class="h-9 sm:h-10 w-auto object-contain">
+        </div>
+      </div>
+
+      <!-- Main Login Card (Obsidian Frosted Glassmorphism) -->
+      <div class="bg-slate-900/80 backdrop-blur-2xl rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_50px_rgba(225,29,72,0.2)] overflow-hidden border border-white/10 relative">
+        
+        <!-- Glowing Top Laser Accent -->
+        <div class="h-1 w-full bg-gradient-to-r from-transparent via-rose-500 to-transparent"></div>
+
+        <!-- Header -->
+        <div class="p-6 sm:p-7 pb-4 text-center">
+          <div class="inline-flex items-center gap-1.5 bg-rose-950/70 border border-rose-800/60 text-rose-300 px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase mb-3 shadow-inner font-mono">
+            <span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
+            Enterprise FTP Pipeline
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight bg-gradient-to-r from-white via-rose-100 to-rose-300 bg-clip-text text-transparent">
+            Debug Shipment Confirm
+          </h1>
+          <p class="text-slate-400 text-xs sm:text-sm mt-1.5 font-medium">
+            Automated Transfer & Diagnostic Pipeline
+          </p>
+        </div>
+
+        <!-- Form Body -->
+        <div class="p-6 sm:p-8 pt-2">
+          <form @submit.prevent="login" class="space-y-4">
+
+            <!-- Username Input -->
+            <div>
+              <label for="username" class="block text-xs font-bold text-slate-300 mb-1.5 tracking-wide uppercase">
+                Username
+              </label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-rose-400">
+                  <i class="bi bi-person-fill text-base"></i>
+                </span>
+                <input 
+                  v-model="username" 
+                  type="text" 
+                  id="username" 
+                  name="username" 
+                  placeholder="Enter your username"
+                  autocomplete="off" 
+                  required
+                  class="w-full pl-10 pr-4 py-3 bg-slate-950/70 border border-slate-700/80 rounded-xl focus:border-rose-500 focus:ring-4 focus:ring-rose-500/20 text-slate-100 placeholder:text-slate-500 outline-none transition duration-200 text-sm shadow-inner"
+                >
+              </div>
+            </div>
+
+            <!-- Password Input -->
+            <div>
+              <label for="password" class="block text-xs font-bold text-slate-300 mb-1.5 tracking-wide uppercase">
+                Password
+              </label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-rose-400">
+                  <i class="bi bi-lock-fill text-base"></i>
+                </span>
+                <input 
+                  v-model="password" 
+                  type="password" 
+                  id="password" 
+                  name="password" 
+                  placeholder="Enter your password"
+                  autocomplete="off" 
+                  required 
+                  @keyup.enter="login"
+                  class="w-full pl-10 pr-4 py-3 bg-slate-950/70 border border-slate-700/80 rounded-xl focus:border-rose-500 focus:ring-4 focus:ring-rose-500/20 text-slate-100 placeholder:text-slate-500 outline-none transition duration-200 text-sm shadow-inner"
+                >
+              </div>
+            </div>
+
+            <!-- Login Button -->
+            <div class="pt-2">
+              <button 
+                @click="login" 
+                type="button" 
+                :disabled="isLoading"
+                class="w-full bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-500 text-white font-extrabold py-3.5 px-6 rounded-xl shadow-[0_8px_25px_-4px_rgba(225,29,72,0.5)] hover:shadow-[0_12px_30px_-4px_rgba(225,29,72,0.7)] transform hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed border border-rose-400/30 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span v-if="isLoading" class="flex items-center gap-2">
+                  <span class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
+                  Authenticating...
+                </span>
+                <span v-else class="flex items-center gap-2">
+                  <span>Sign In</span>
+                  <i class="bi bi-arrow-right text-base font-bold"></i>
+                </span>
+              </button>
+            </div>
+
+          </form>
+
+          <!-- Footer Badges -->
+          <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+            <span class="flex items-center gap-1 text-slate-400">
+              <i class="bi bi-shield-check text-rose-400"></i>
+              <span>Secured V1.0.3</span>
+            </span>
+            <span class="bg-slate-950 px-2 py-0.5 rounded-full border border-slate-800 font-mono text-[10px] text-slate-400 uppercase">
+              <%= process.env.NODE_ENV || 'local' %> mode
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Copyright -->
+      <div class="text-center mt-5">
+        <p class="text-xs text-slate-400/80 drop-shadow-sm font-medium">
+          Information Technology © 2026 | Belton Technology Group
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+
+<script>
+  console.log('===== test login ====')
+  var frmLogin = new Vue({
+    el: '#app-login',
+    data: {
+      is_checked_login: false,
+      username: '',
+      password: '',
+      isLoading: false
+    },
+    methods: {
+      async login() {
+        if (this.username == '') {
+          showWarningMessage('กรุณาระบุ username');
+          return;
+        }
+        if (this.password == '') {
+          showWarningMessage('กรุณาระบุ password');
+          return;
+        }
+
+        this.isLoading = true;
+
+        try {
+          let res = await axios.post('/api/check-login', {
+            username: this.username,
+            password: this.password
+          });
+          res = res.data;
+
+          if (res.status != 200) {
+            showErrorMessage(res.message);
+            this.isLoading = false;
+          } else {
+            window.location.href = '/main_menu';
+          }
+        } catch (error) {
+          showErrorMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+          this.isLoading = false;
+        }
+      }
+    }
+  });
+</script>

@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <%- include('../../partials/script') %>
+</head>
+<body class="bg-gray-50">
+    <%- include('../../partials/header') %>
+
+    <div id="vue-app" class="container mx-auto px-4 py-6 pb-24" v-cloak>
+        <!-- Header Section -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 pb-4 border-b border-gray-200">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 text-lg">
+                        🚚
+                    </span>
+                    ACA (Carriage) Shipment Debugger
+                </h1>
+                <p class="text-gray-550 text-xs mt-1">เครื่องมือตรวจสอบความถูกต้องของระบบส่งข้อมูล Carriage Shipment (S0004/Z0004)</p>
+            </div>
+            <!-- Back button -->
+            <a href="/main_menu" class="mt-4 md:mt-0 flex items-center gap-2 text-sm text-gray-650 hover:text-gray-900 transition font-medium">
+                ← กลับสู่เมนูหลัก
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Left Panel: Date Select & DO List -->
+            <div class="lg:col-span-4 flex flex-col gap-6">
+                <!-- Search Card -->
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                    <h2 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                        📅 เลือกวันที่คัดกรอง DO
+                    </h2>
+                    <div class="flex gap-2">
+                        <input type="date" v-model="selectedDate" class="flex-grow px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition">
+                        <button @click="fetchDOs" :disabled="loadingDos" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50 flex items-center gap-1">
+                            <span v-if="!loadingDos">🔍</span>
+                            <span class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" v-else></span>
+                            ค้นหา
+                        </button>
+                    </div>
+                    <button @click="toggleSql('dos')" class="text-xs text-blue-600 hover:underline mt-3 flex items-center gap-1 focus:outline-none">
+                        🔍 {{ showSql.dos ? 'ซ่อนคำสั่ง SQL' : 'แสดงคำสั่ง SQL (RAW Query)' }}
+                    </button>
+                    <!-- SQL Box -->
+                    <div v-if="showSql.dos" class="mt-2.5 p-3 bg-gray-900 text-gray-300 font-mono text-[11px] rounded-lg border border-gray-800 relative select-all">
+                        <button @click="copyText(getSqlText('dos'))" class="absolute right-2 top-2 bg-gray-800 hover:bg-gray-700 text-white px-2 py-0.5 rounded text-[10px]">คัดลอก</button>
+                        <pre class="whitespace-pre-wrap">{{ getSqlText('dos') }}</pre>
+                    </div>
+                </div>
+
+                <!-- DO List Card -->
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm flex-grow min-h-[300px] flex flex-col">
+                    <div class="p-5 border-b border-gray-150 flex items-center justify-between">
+                        <h2 class="text-sm font-bold text-gray-750 flex items-center gap-2">
+                            📋 รายการ DO ประจำวัน
+                        </h2>
+                        <span class="bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-0.5 rounded-full">
+                            {{ doList.length }}
+                        </span>
+                    </div>
+
+                    <!-- Loader -->
+                    <div class="flex-grow flex items-center justify-center p-8 text-gray-400 text-sm" v-if="loadingDos">
+                        <span class="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mb-2"></span>
+                        กำลังโหลดข้อมูล...
+                    </div>
+
+                    <!-- Empty State -->
+                    <div class="flex-grow flex flex-col items-center justify-center p-8 text-center text-gray-400 text-sm" v-else-if="doList.length === 0">
+                        <span class="text-3xl mb-2">📭</span>
+                        <span>ไม่พบข้อมูล DO ในระบบจัดส่ง<br>กรุณาเลือกวันที่ที่มีรายการยืนยัน</span>
+                    </div>
+
+                    <!-- List -->
+                    <div class="overflow-y-auto max-h-[450px]" v-else>
+                        <div v-for="doItem in doList" :key="doItem.do" 
+                             @click="selectDO(doItem)"
+                             :class="['p-4 border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition flex justify-between items-center', selectedDO && selectedDO.do === doItem.do ? 'bg-blue-50 border-l-4 border-l-blue-600 pl-3' : '']">
+                            <div>
+                                <span class="font-semibold text-gray-800 text-sm block">{{ doItem.do }}</span>
+                                <span class="text-xs text-gray-500 block mt-0.5">ประเภท: {{ getDOTypeByPrefix(doItem.do) }}</span>
+                            </div>
+                            <span :class="['text-xs font-semibold px-2.5 py-0.5 rounded-full', doItem.ship_to_location === 'VMI-Hub' ? 'bg-indigo-100 text-indigo-700' : 'bg-green-100 text-green-700']">
+                                {{ doItem.ship_to_location }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prefix Info Card -->
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-sm font-bold text-gray-700 flex items-center gap-2">
+                            ℹ️ การอ้างอิง Prefix ปลายทาง
+                        </h2>
+                        <button @click="toggleSql('prefixes')" class="text-xs text-blue-600 hover:underline flex items-center gap-1 focus:outline-none">
+                            🔍 {{ showSql.prefixes ? 'ซ่อน SQL' : 'แสดง SQL' }}
+                        </button>
+                    </div>
+
+                    <!-- SQL Box -->
+                    <div v-if="showSql.prefixes" class="mb-3 p-3 bg-gray-900 text-gray-300 font-mono text-[11px] rounded-lg border border-gray-800 relative select-all">
+                        <button @click="copyText(getSqlText('prefixes'))" class="absolute right-2 top-2 bg-gray-800 hover:bg-gray-700 text-white px-2 py-0.5 rounded text-[10px]">คัดลอก</button>
+                        <pre class="whitespace-pre-wrap">{{ getSqlText('prefixes') }}</pre>
+                    </div>
+                    <div class="table-wrapper text-xs">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-gray-50 text-gray-550">
+                                    <th class="p-2 border-b">Prefix</th>
+                                    <th class="p-2 border-b">ประเภท</th>
+                                    <th class="p-2 border-b">คลังปลายทาง</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="pf in prefixes" :key="pf.prefix" class="hover:bg-gray-50">
+                                    <td class="p-2 border-b font-mono font-medium">{{ pf.prefix }}</td>
+                                    <td class="p-2 border-b">{{ pf.type }}</td>
+                                    <td class="p-2 border-b font-medium text-gray-700">{{ pf.ship_to }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Diagnostic Details -->
+            <div class="lg:col-span-8">
+                <!-- Diagnostic Empty State -->
+                <div class="bg-white p-12 rounded-xl border border-gray-200 shadow-sm text-center text-gray-400 min-h-[500px] flex flex-col items-center justify-center" v-if="!selectedDO">
+                    <span class="text-5xl mb-3">⚡</span>
+                    <h3 class="text-base font-bold text-gray-750 mb-1">ยินดีต้อนรับเข้าสู่ระบบตรวจสอบ ACA</h3>
+                    <p class="text-sm max-w-md">กรุณาเลือกใบสั่งส่งสินค้า (DO) จากแถบทางด้านซ้าย เพื่อทำการรันระบบวินิจฉัยตรวจสอบข้อมูลทีละขั้นตอน (Step-by-Step Diagnostic)</p>
+                </div>
+
+                <!-- Diagnostic Main Panel -->
+                <div class="flex flex-col gap-6" v-else>
+                    <!-- DO Header info -->
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <span class="text-xs text-blue-600 font-bold uppercase tracking-wider block">การวิเคราะห์ข้อมูลประมวลผล</span>
+                            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2 mt-0.5">
+                                {{ selectedDO.do }}
+                                <span :class="['text-xs font-semibold px-2 py-0.5 rounded-full', selectedDO.ship_to_location === 'VMI-Hub' ? 'bg-indigo-50 text-indigo-660' : 'bg-green-50 text-green-660']">
+                                    {{ selectedDO.ship_to_location }}
+                                </span>
+                            </h2>
+                        </div>
+                        <button @click="diagnoseDO" :disabled="diagnosing" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition flex items-center gap-1.5 shadow-sm disabled:opacity-50">
+                            <span class="animate-spin" v-if="diagnosing">🔄</span>
+                            <span v-else>▶️</span>
+                            {{ diagnosing ? 'กำลังรันระบบวินิจฉัย...' : 'รันการวิเคราะห์อีกครั้ง' }}
+                        </button>
+                    </div>
+
+                    <!-- Steps Dashboard -->
+                    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <h3 class="text-sm font-bold text-gray-700 mb-6 flex items-center gap-2">
+                            ⚙️ ขั้นตอนการวิเคราะห์ระบบ WMS -> ฝั่งสายผลิต
+                        </h3>
+
+                        <!-- Step 1: WMS Match Data -->
+                        <div class="border-l-2 pl-6 pb-6 relative" :class="getStepBorderColor('step1')">
+                            <!-- Indicator node -->
+                            <div class="absolute -left-[11px] top-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm" :class="getStepNodeColor('step1')">
+                                <span v-if="diagResult.step1.status === 'success'">✓</span>
+                                <span v-else-if="diagResult.step1.status === 'error'">⚠</span>
+                                <span v-else>1</span>
+                            </div>
+                            <div class="flex justify-between items-start gap-4">
+                                <div>
+                                    <h4 class="font-bold text-sm text-gray-850">ขั้นตอนที่ 1: ตรวจสอบ WMS Match Data</h4>
+                                    <p class="text-xs text-gray-500 mt-1">คิวรีตาราง <code>WMS.HGSTACA_MATCH_DATA</code> เพื่อเชื่อมโยงหมายเลขลอตผลิต</p>
+                                    <button @click="toggleSql('step1')" class="text-xs text-blue-600 hover:underline mt-1 flex items-center gap-1 focus:outline-none">
+                                        🔍 {{ showSql.step1 ? 'ซ่อนคำสั่ง SQL' : 'แสดงคำสั่ง SQL (RAW Query)' }}
+                                    </button>
+                                </div>
+                                <span :class="['badge text-xs', getStepBadgeClass('step1')]">{{ diagResult.step1.status.toUpperCase() }}</span>
+                            </div>
+
+                            <!-- SQL Box -->
+                            <div v-if="showSql.step1" class="mt-2.5 p-3 bg-gray-900 text-gray-300 font-mono text-[11px] rounded-lg border border-gray-800 relative select-all">
+                                <button @click="copyText(getSqlText('step1'))" class="absolute right-2 top-2 bg-gray-800 hover:bg-gray-700 text-white px-2 py-0.5 rounded text-[10px]">คัดลอก</button>
+                                <pre class="whitespace-pre-wrap">{{ getSqlText('step1') }}</pre>
+                            </div>
+
+                            <div class="mt-3 p-3 bg-gray-50 rounded-lg text-xs border border-gray-150" v-if="diagResult.step1.message">
+                                <p :class="diagResult.step1.status === 'error' ? 'text-red-600 font-medium' : 'text-gray-700'">
+                                    {{ diagResult.step1.message }}
+                                </p>
+                                <!-- Match table data -->
+                                <div class="mt-3 overflow-x-auto" v-if="diagResult.step1.data.length > 0">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="text-gray-550 font-semibold bg-gray-100">
+                                                <th class="p-1.5 border-b">Store Lot</th>
+                                                <th class="p-1.5 border-b">Prod Lot</th>
+                                                <th class="p-1.5 border-b text-center">Box No</th>
+                                                <th class="p-1.5 border-b">Part Number</th>
+                                                <th class="p-1.5 border-b text-right">Plan Qty</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="row in diagResult.step1.data" class="hover:bg-gray-100">
+                                                <td class="p-1.5 border-b font-mono">{{ row.store_lot }}</td>
+                                                <td class="p-1.5 border-b font-mono">{{ row.prod_lot }}</td>
+                                                <td class="p-1.5 border-b text-center">{{ row.box_no }}</td>
+                                                <td class="p-1.5 border-b font-mono">{{ row.customer_pn }}</td>
+                                                <td class="p-1.5 border-b text-right">{{ formatNumber(row.plan_qty) }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Confirm & Pallets -->
+                        <div class="border-l-2 pl-6 pb-6 relative" :class="getStepBorderColor('step2')">
+                            <div class="absolute -left-[11px] top-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm" :class="getStepNodeColor('step2')">
+                                <span v-if="diagResult.step2.status === 'success'">✓</span>
+                                <span v-else-if="diagResult.step2.status === 'error'">⚠</span>
+                                <span v-else>2</span>
+                            </div>
+                            <div class="flex justify-between items-start gap-4">
+                                <div>
+                                    <h4 class="font-bold text-sm text-gray-855">ขั้นตอนที่ 2: ตรวจสอบข้อมูลยืนยันและพาเลทสินค้า</h4>
+                                    <p class="text-xs text-gray-500 mt-1">ตรวจสอบตาราง <code>WMS.HGSTACA_SHIP_CONFIRM</code> & <code>WMS.HGSTACA_PALLET_DATA</code></p>
+                                    <button @click="toggleSql('step2')" class="text-xs text-blue-600 hover:underline mt-1 flex items-center gap-1 focus:outline-none">
+                                        🔍 {{ showSql.step2 ? 'ซ่อนคำสั่ง SQL' : 'แสดงคำสั่ง SQL (RAW Query)' }}
+                                    </button>
+                                </div>
+                                <span :class="['badge text-xs', getStepBadgeClass('step2')]">{{ diagResult.step2.status.toUpperCase() }}</span>
+                            </div>
+
+                            <!-- SQL Box -->
+                            <div v-if="showSql.step2" class="mt-2.5 p-3 bg-gray-900 text-gray-300 font-mono text-[11px] rounded-lg border border-gray-800 relative select-all">
+                                <button @click="copyText(getSqlText('step2'))" class="absolute right-2 top-2 bg-gray-800 hover:bg-gray-700 text-white px-2 py-0.5 rounded text-[10px]">คัดลอก</button>
+                                <pre class="whitespace-pre-wrap">{{ getSqlText('step2') }}</pre>
+                            </div>
+
+                            <div class="mt-3 p-3 bg-gray-50 rounded-lg text-xs border border-gray-150" v-if="diagResult.step2.message">
+                                <p :class="diagResult.step2.status === 'error' ? 'text-red-600 font-medium' : 'text-gray-700'">
+                                    {{ diagResult.step2.message }}
+                                </p>
+                                <div class="mt-3 overflow-x-auto" v-if="diagResult.step2.data.length > 0">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="text-gray-555 font-semibold bg-gray-100">
+                                                <th class="p-1.5 border-b">Pallet Running</th>
+                                                <th class="p-1.5 border-b">Prod Lot</th>
+                                                <th class="p-1.5 border-b text-center">Box ID</th>
+                                                <th class="p-1.5 border-b text-right">Pallet Qty</th>
+                                                <th class="p-1.5 border-b text-right">Confirm Qty</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="row in diagResult.step2.data" class="hover:bg-gray-100">
+                                                <td class="p-1.5 border-b font-mono">{{ row.pallet_running }}</td>
+                                                <td class="p-1.5 border-b font-mono">{{ row.prod_lot }}</td>
+                                                <td class="p-1.5 border-b text-center font-medium">{{ row.box }}</td>
+                                                <td class="p-1.5 border-b text-right">{{ formatNumber(row.qty_pallet) }}</td>
+                                                <td class="p-1.5 border-b text-right font-semibold">{{ formatNumber(row.qty) }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: WMS Pack IDs -->
+                        <div class="border-l-2 pl-6 pb-6 relative" :class="getStepBorderColor('step3')">
+                            <div class="absolute -left-[11px] top-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm" :class="getStepNodeColor('step3')">
+                                <span v-if="diagResult.step3.status === 'success'">✓</span>
+                                <span v-else-if="diagResult.step3.status === 'error'">⚠</span>
+                                <span v-else>3</span>
+                            </div>
+                            <div class="flex justify-between items-start gap-4">
+                                <div>
+                                    <h4 class="font-bold text-sm text-gray-855">ขั้นตอนที่ 3: ตรวจสอบรหัสแพ็กเกจ (Pack ID) ของ WMS</h4>
+                                    <p class="text-xs text-gray-500 mt-1">คัดกรองรหัสกล่อง WMS จาก <code>WMS.HGSTACA_FGREC_BOX</code> & <code>WMS.HGSTACA_FGREC_PACK</code></p>
+                                    <button @click="toggleSql('step3')" class="text-xs text-blue-600 hover:underline mt-1 flex items-center gap-1 focus:outline-none">
+                                        🔍 {{ showSql.step3 ? 'ซ่อนคำสั่ง SQL' : 'แสดงคำสั่ง SQL (RAW Query)' }}
+                                    </button>
+                                </div>
+                                <span :class="['badge text-xs', getStepBadgeClass('step3')]">{{ diagResult.step3.status.toUpperCase() }}</span>
+                            </div>
+
+                            <!-- SQL Box -->
+                            <div v-if="showSql.step3" class="mt-2.5 p-3 bg-gray-900 text-gray-300 font-mono text-[11px] rounded-lg border border-gray-800 relative select-all">
+                                <button @click="copyText(getSqlText('step3'))" class="absolute right-2 top-2 bg-gray-800 hover:bg-gray-700 text-white px-2 py-0.5 rounded text-[10px]">คัดลอก</button>
+                                <pre class="whitespace-pre-wrap">{{ getSqlText('step3') }}</pre>
+                            </div>
+
+                            <div class="mt-3 p-3 bg-gray-50 rounded-lg text-xs border border-gray-150" v-if="diagResult.step3.message">
+                                <p :class="diagResult.step3.status === 'error' ? 'text-red-600 font-medium' : 'text-gray-700'">
+                                    {{ diagResult.step3.message }}
+                                </p>
+                                <div class="mt-3 overflow-x-auto" v-if="diagResult.step3.data.length > 0">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="text-gray-555 font-semibold bg-gray-100">
+                                                <th class="p-1.5 border-b">Store Lot</th>
+                                                <th class="p-1.5 border-b">Prod Lot</th>
+                                                <th class="p-1.5 border-b text-center">Box No</th>
+                                                <th class="p-1.5 border-b font-mono">Pack ID (ใน WMS)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="row in diagResult.step3.data" class="hover:bg-gray-100">
+                                                <td class="p-1.5 border-b font-mono">{{ row.store_lot }}</td>
+                                                <td class="p-1.5 border-b font-mono">{{ row.prod_lot }}</td>
+                                                <td class="p-1.5 border-b text-center">{{ row.box_no }}</td>
+                                                <td class="p-1.5 border-b font-mono font-medium text-blue-600">{{ row.pack_id }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Physical Barcodes -->
+                        <div class="border-l-2 pl-6 pb-6 relative" :class="getStepBorderColor('step4')">
+                            <div class="absolute -left-[11px] top-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm" :class="getStepNodeColor('step4')">
+                                <span v-if="diagResult.step4.status === 'success'">✓</span>
+                                <span v-else-if="diagResult.step4.status === 'error'">⚠</span>
+                                <span v-else>4</span>
+                            </div>
+                            <div class="flex justify-between items-start gap-4">
+                                <div>
+                                    <h4 class="font-bold text-sm text-gray-855">ขั้นตอนที่ 4: ค้นหาข้อมูลบาร์โค้ดถาดสายผลิต (PACK_HEADER)</h4>
+                                    <p class="text-xs text-gray-500 mt-1">คิวรีตาราง <code>HGSTACA.PACK_HEADER</code> (ฐานข้อมูลฝั่งสายผลิต)</p>
+                                    <button @click="toggleSql('step4')" class="text-xs text-blue-600 hover:underline mt-1 flex items-center gap-1 focus:outline-none">
+                                        🔍 {{ showSql.step4 ? 'ซ่อนคำสั่ง SQL' : 'แสดงคำสั่ง SQL (RAW Query)' }}
+                                    </button>
+                                </div>
+                                <span :class="['badge text-xs', getStepBadgeClass('step4')]">{{ diagResult.step4.status.toUpperCase() }}</span>
+                            </div>
+
+                            <!-- SQL Box -->
+                            <div v-if="showSql.step4" class="mt-2.5 p-3 bg-gray-900 text-gray-300 font-mono text-[11px] rounded-lg border border-gray-800 relative select-all">
+                                <button @click="copyText(getSqlText('step4'))" class="absolute right-2 top-2 bg-gray-800 hover:bg-gray-700 text-white px-2 py-0.5 rounded text-[10px]">คัดลอก</button>
+                                <pre class="whitespace-pre-wrap">{{ getSqlText('step4') }}</pre>
+                            </div>
+
+                            <div class="mt-3 p-3 bg-gray-50 rounded-lg text-xs border border-gray-150" v-if="diagResult.step4.message">
+                                <p :class="diagResult.step4.status === 'error' ? 'text-red-600 font-medium' : 'text-gray-700'">
+                                    {{ diagResult.step4.message }}
+                                </p>
+                                <div class="mt-3 overflow-x-auto" v-if="diagResult.step4.data.length > 0">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="text-gray-550 font-semibold bg-gray-100">
+                                                <th class="p-1.5 border-b font-mono">Pack ID</th>
+                                                <th class="p-1.5 border-b font-mono">Tray ID (Barcode)</th>
+                                                <th class="p-1.5 border-b text-right">Scanned Qty</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="row in diagResult.step4.data" class="hover:bg-gray-100">
+                                                <td class="p-1.5 border-b font-mono">{{ row.pack_id }}</td>
+                                                <td class="p-1.5 border-b font-mono text-gray-700 font-medium">{{ row.barcode }}</td>
+                                                <td class="p-1.5 border-b text-right font-semibold text-emerald-600">{{ formatNumber(row.tot_qty_pack) }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 5: Audit Mismatches & Expirations -->
+                        <div class="pl-6 relative">
+                            <div class="absolute -left-[11px] top-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm" :class="diagResult.audit.mismatch ? 'bg-red-500' : 'bg-emerald-500'">
+                                <span v-if="!diagResult.audit.mismatch">✓</span>
+                                <span v-else>⚠</span>
+                            </div>
+                            <h4 class="font-bold text-sm text-gray-855">ขั้นตอนที่ 5: รายงานผลการตรวจสอบเชิงลึก (Audit Results)</h4>
+                            <p class="text-xs text-gray-500 mt-1">สรุปข้อมูลความผิดพลาดเชิงโครงสร้างและปริมาณสินค้าของลอตจัดส่ง</p>
+
+                            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Qty Check Box -->
+                                <div class="p-4 rounded-xl border" :class="diagResult.audit.mismatch ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'">
+                                    <h5 class="text-xs font-bold" :class="diagResult.audit.mismatch ? 'text-red-800' : 'text-emerald-800'">
+                                        เปรียบเทียบจำนวนสินค้าบรรจุ
+                                    </h5>
+                                    <div class="flex items-end justify-between mt-2">
+                                        <div>
+                                            <span class="text-xs text-gray-500 block">WMS Shipment Qty</span>
+                                            <span class="text-lg font-bold text-gray-800">{{ formatNumber(diagResult.audit.totalConfirmQty) }} ชิ้น</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-xs text-gray-500 block text-right">Scanned Qty (สายผลิต)</span>
+                                            <span class="text-lg font-bold text-gray-800 text-right">{{ formatNumber(diagResult.audit.totalPackQty) }} ชิ้น</span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 pt-3 border-t border-dashed" :class="diagResult.audit.mismatch ? 'border-red-200 text-red-700' : 'border-emerald-200 text-emerald-700'">
+                                        <div class="flex justify-between text-xs font-semibold">
+                                            <span>ผลลัพธ์การกระทบยอด:</span>
+                                            <span v-if="diagResult.audit.mismatch">
+                                                ❌ จำนวนไม่ตรงกัน (ต่างกัน {{ formatNumber(diagResult.audit.totalConfirmQty - diagResult.audit.totalPackQty) }} ชิ้น)
+                                            </span>
+                                            <span v-else>
+                                                ✅ จำนวนตรงกันสมบูรณ์
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Model Uniformity -->
+                                <div class="p-4 rounded-xl border bg-gray-50 border-gray-200">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <h5 class="text-xs font-bold text-gray-700">ตรวจสอบความถูกต้องของรุ่นผลิตภัณฑ์</h5>
+                                        <button @click="toggleSql('model')" class="text-xs text-blue-600 hover:underline flex items-center gap-1 focus:outline-none">
+                                            🔍 {{ showSql.model ? 'ซ่อน SQL' : 'แสดง SQL' }}
+                                        </button>
+                                    </div>
+
+                                    <!-- SQL Box -->
+                                    <div v-if="showSql.model" class="mb-3 p-3 bg-gray-900 text-gray-300 font-mono text-[11px] rounded-lg border border-gray-800 relative select-all">
+                                        <button @click="copyText(getSqlText('model'))" class="absolute right-2 top-2 bg-gray-800 hover:bg-gray-700 text-white px-2 py-0.5 rounded text-[10px]">คัดลอก</button>
+                                        <pre class="whitespace-pre-wrap">{{ getSqlText('model') }}</pre>
+                                    </div>
+
+                                    <div class="mt-2 text-xs text-gray-655 flex flex-col gap-1.5 font-medium">
+                                        <div class="flex justify-between">
+                                            <span>ความสม่ำเสมอของพาร์ตสินค้า:</span>
+                                            <span :class="['font-semibold', diagResult.audit.modelUniform ? 'text-emerald-600' : 'text-red-650']">
+                                                {{ diagResult.audit.modelUniform ? 'พาร์ตสินค้าประเภทเดียวกัน' : 'มีพาร์ตสินค้าหลากหลายปะปน' }}
+                                            </span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>รหัสพาร์ตตัวอย่าง:</span>
+                                            <span class="font-mono font-bold text-gray-800">{{ diagResult.step1.data.length > 0 ? diagResult.step1.data[0].customer_pn : '-' }}</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>ชื่อรุ่นโมเดล (Model):</span>
+                                            <span class="font-semibold text-blue-600">{{ diagResult.audit.modelName || '-' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Expiry date calculation breakdown -->
+                            <div class="mt-4 p-4 rounded-xl border border-gray-200 bg-gray-50" v-if="diagResult.audit.expiryCalculations.length > 0">
+                                <h5 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                                    📅 ตรรกะประมวลผลวันหมดอายุ (Expiry Date Simulation)
+                                </h5>
+                                <p class="text-xs text-gray-500 mb-3">คำนวณวันหมดอายุชิ้นงานโดยนำวันที่จากรหัสกล่อง (Pack ID) ไปบวกเพิ่ม 2 ปี ดังแสดงด้านล่าง:</p>
+                                <div class="table-wrapper text-xs">
+                                    <table class="w-full text-left">
+                                        <thead>
+                                            <tr class="bg-gray-100 text-gray-550">
+                                                <th class="p-1.5">Pack ID (เลขกล่อง)</th>
+                                                <th class="p-1.5">7 หลักคีย์นำหน้า</th>
+                                                <th class="p-1.5">วันที่ถอดรหัส (YYMMDD)</th>
+                                                <th class="p-1.5">คำนวณ + 2 ปี (YYYY-MM-DD)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="calc in diagResult.audit.expiryCalculations" class="hover:bg-gray-100">
+                                                <td class="p-1.5 font-mono">{{ calc.packId }}</td>
+                                                <td class="p-1.5 font-mono text-gray-700 font-medium">{{ calc.prefix }}</td>
+                                                <td class="p-1.5 font-mono">{{ calc.rawDate }}</td>
+                                                <td class="p-1.5 font-mono text-blue-600 font-semibold">{{ calc.computedDate }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- FTP config Check -->
+                    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm" v-if="diagResult.audit.ftpConfig">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                ☁️ รายละเอียดปลายทางเชื่อมต่อ FTP ลูกค้า (WMS.HGSTACA_FTP_CONFIG)
+                            </h3>
+                            <button @click="toggleSql('ftp')" class="text-xs text-blue-600 hover:underline flex items-center gap-1 focus:outline-none">
+                                🔍 {{ showSql.ftp ? 'ซ่อนคำสั่ง SQL' : 'แสดงคำสั่ง SQL (RAW Query)' }}
+                            </button>
+                        </div>
+
+                        <!-- SQL Box -->
+                        <div v-if="showSql.ftp" class="mb-3 p-3 bg-gray-900 text-gray-300 font-mono text-[11px] rounded-lg border border-gray-800 relative select-all">
+                            <button @click="copyText(getSqlText('ftp'))" class="absolute right-2 top-2 bg-gray-800 hover:bg-gray-700 text-white px-2 py-0.5 rounded text-[10px]">คัดลอก</button>
+                            <pre class="whitespace-pre-wrap">{{ getSqlText('ftp') }}</pre>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-gray-655 mt-2">
+                            <div class="bg-gray-50 p-3 rounded-lg border border-gray-150">
+                                <span class="text-gray-400 block mb-0.5">FTP Hostname</span>
+                                <span class="font-mono font-semibold text-gray-800">{{ diagResult.audit.ftpConfig.host }}</span>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg border border-gray-150">
+                                <span class="text-gray-400 block mb-0.5">Username</span>
+                                <span class="font-mono font-semibold text-gray-850">{{ diagResult.audit.ftpConfig.user }}</span>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg border border-gray-150">
+                                <span class="text-gray-400 block mb-0.5">Remote Directory</span>
+                                <span class="font-mono font-semibold text-gray-800">{{ diagResult.audit.ftpConfig.remote_path }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-3 z-30">
+        <p class="text-center text-primary-red text-xs font-semibold">
+            Information Technology © 2025
+        </p>
+    </footer>
+
+    <script>
+        new Vue({
+            el: '#vue-app',
+            data: {
+                selectedDate: '2026-08-10',
+                loadingDos: false,
+                diagnosing: false,
+                doList: [],
+                prefixes: [],
+                selectedDO: null,
+                showSql: {
+                    step1: false,
+                    step2: false,
+                    step3: false,
+                    step4: false,
+                    dos: false,
+                    prefixes: false,
+                    model: false,
+                    ftp: false
+                },
+                diagResult: {
+                    step1: { status: 'pending', message: '', data: [] },
+                    step2: { status: 'pending', message: '', data: [] },
+                    step3: { status: 'pending', message: '', data: [] },
+                    step4: { status: 'pending', message: '', data: [] },
+                    audit: {
+                        totalConfirmQty: 0,
+                        totalPackQty: 0,
+                        mismatch: false,
+                        modelUniform: true,
+                        modelName: '',
+                        expiryCalculations: [],
+                        ftpConfig: null
+                    }
+                }
+            },
+            mounted() {
+                this.fetchPrefixes();
+                this.fetchDOs();
+            },
+            methods: {
+                async fetchPrefixes() {
+                    try {
+                        const response = await axios.get('/api/debug/aca/prefixes');
+                        if (response.data && response.data.status === 200) {
+                            this.prefixes = response.data.data;
+                        }
+                    } catch (err) {
+                        console.error('Error loading prefixes:', err);
+                    }
+                },
+                async fetchDOs() {
+                    if (!this.selectedDate) return;
+                    this.loadingDos = true;
+                    this.doList = [];
+                    this.selectedDO = null;
+                    try {
+                        const response = await axios.post('/api/debug/aca/dos', { date: this.selectedDate });
+                        if (response.data && response.data.status === 200) {
+                            this.doList = response.data.data;
+                        }
+                    } catch (err) {
+                        Swal.fire('ข้อผิดพลาด', 'ไม่สามารถดึงข้อมูล DO ได้: ' + err.message, 'error');
+                    } finally {
+                        this.loadingDos = false;
+                    }
+                },
+                getDOTypeByPrefix(doNo) {
+                    if (!doNo) return 'Unknown';
+                    const prefix = doNo.substring(0, 4);
+                    const match = this.prefixes.find(p => p.prefix === prefix);
+                    return match ? match.type : 'Unknown';
+                },
+                async selectDO(doItem) {
+                    this.selectedDO = doItem;
+                    // Reset SQL visibility toggles on DO change (preserving left panels)
+                    this.showSql = {
+                        step1: false,
+                        step2: false,
+                        step3: false,
+                        step4: false,
+                        dos: this.showSql.dos,
+                        prefixes: this.showSql.prefixes,
+                        model: false,
+                        ftp: false
+                    };
+                    await this.diagnoseDO();
+                },
+                async diagnoseDO() {
+                    if (!this.selectedDO) return;
+                    this.diagnosing = true;
+                    // Reset diagnostic structure
+                    this.diagResult = {
+                        step1: { status: 'pending', message: '', data: [] },
+                        step2: { status: 'pending', message: '', data: [] },
+                        step3: { status: 'pending', message: '', data: [] },
+                        step4: { status: 'pending', message: '', data: [] },
+                        audit: {
+                            totalConfirmQty: 0,
+                            totalPackQty: 0,
+                            mismatch: false,
+                            modelUniform: true,
+                            modelName: '',
+                            expiryCalculations: [],
+                            ftpConfig: null
+                        }
+                    };
+
+                    try {
+                        const response = await axios.post('/api/debug/aca/diagnose', { doNumber: this.selectedDO.do });
+                        if (response.data && response.data.status === 200) {
+                            this.diagResult = response.data.data;
+                        }
+                    } catch (err) {
+                        Swal.fire('ข้อผิดพลาด', 'การรันระบบวินิจฉัยล้มเหลว: ' + err.message, 'error');
+                    } finally {
+                        this.diagnosing = false;
+                    }
+                },
+                toggleSql(stepKey) {
+                    this.showSql[stepKey] = !this.showSql[stepKey];
+                },
+                getSqlText(stepKey) {
+                    const doNo = this.selectedDO ? this.selectedDO.do : 'DO_NUMBER';
+                    
+                    // Extract values dynamically for parameter injection
+                    const prodLots = this.diagResult.step1.data.map(r => r.prod_lot).filter(Boolean);
+                    const prodLotsStr = prodLots.length > 0 ? prodLots.map(l => `'${l}'`).join(', ') : "'PROD_LOT_1', 'PROD_LOT_2'";
+                    
+                    const storeLots = this.diagResult.step1.data.map(r => r.store_lot).filter(Boolean);
+                    const storeLotsStr = storeLots.length > 0 ? storeLots.map(l => `'${l}'`).join(', ') : "'STORE_LOT_1', 'STORE_LOT_2'";
+                    
+                    const packIds = this.diagResult.step3.data.map(r => r.pack_id).filter(Boolean);
+                    const packIdsStr = packIds.length > 0 ? packIds.map(p => `'${p}'`).join(', ') : "'PACK_ID_1', 'PACK_ID_2'";
+
+                    if (stepKey === 'dos') {
+                        return `SELECT s.do, p.ship_to_location 
+FROM WMS.HGSTACA_SHIP_CONFIRM s 
+INNER JOIN WMS.lrv_wms_check_confirm_log l ON s.plan_id = l.plan_id
+INNER JOIN WMS.SHIPMENTPLAN_DATA p ON s.plan_id = p.plan_id 
+WHERE DATE(s.date) = '${this.selectedDate || 'YYYY-MM-DD'}' AND s.type = 'PACK'
+GROUP BY s.do, p.ship_to_location
+ORDER BY s.do;`;
+                    }
+                    if (stepKey === 'prefixes') {
+                        return `SELECT prefix, ship_to, type 
+FROM WMS.HGSTACA_SHIP_TO_MASTER 
+WHERE status = 'active';`;
+                    }
+                    if (stepKey === 'step1') {
+                        return `SELECT d.plan_id, d.do_no, p.customer_pn, p.item_no, p.model_name, p.qty as plan_qty, 
+       m.store_lot, m.prod_lot, m.lot_size as qty_boxs, p.po_no, m.box_no
+FROM WMS.SHIPMENTDO_DATA d 
+INNER JOIN WMS.SHIPMENTPLAN_DATA p ON d.plan_id = p.plan_id
+INNER JOIN WMS.HGSTACA_MATCH_DATA m ON d.do_no = m.do_no
+WHERE d.do_no = '${doNo}'
+ORDER BY m.box_no;`;
+                    }
+                    if (stepKey === 'step2') {
+                        return `SELECT s.pallet_no as pallet_running, s.box_detail, DATE_FORMAT(s.date,'%d-%M-%Y') as ship_date, 
+       d.qty_pallet, s.prod_lot, s.qty, s.box
+FROM WMS.HGSTACA_SHIP_CONFIRM s
+INNER JOIN WMS.HGSTACA_PALLET_DATA d ON s.pallet_no = d.running_pallet
+WHERE s.prod_lot IN (${prodLotsStr}) AND s.type = 'pack' AND d.status = 'Active';`;
+                    }
+                    if (stepKey === 'step3') {
+                        return `SELECT b.store_lot, b.box_no, b.prod_lot, p.pack_id
+FROM WMS.HGSTACA_FGREC_BOX b
+INNER JOIN WMS.HGSTACA_FGREC_PACK p ON b.id = p.box_id
+WHERE b.store_lot IN (${storeLotsStr}) AND b.box_status = 'Active';`;
+                    }
+                    if (stepKey === 'step4') {
+                        return `SELECT pack_id, tot_qty_pack, barcode 
+FROM HGSTACA.PACK_HEADER 
+WHERE pack_id IN (${packIdsStr});`;
+                    }
+                    if (stepKey === 'model') {
+                        const itemNo = this.diagResult.step1.data.length > 0 ? this.diagResult.step1.data[0].item_no : 'ITEM_NO';
+                        return `SELECT model_name 
+FROM MASTER.COMMON_ORACLE_ITEMMASTER_ORG 
+WHERE item_no = '${itemNo}' LIMIT 1;`;
+                    }
+                    if (stepKey === 'ftp') {
+                        return `SELECT host, user, remote_path FROM WMS.HGSTACA_FTP_CONFIG LIMIT 1;`;
+                    }
+                    return '';
+                },
+                copyText(text) {
+                    const el = document.createElement('textarea');
+                    el.value = text;
+                    document.body.appendChild(el);
+                    el.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(el);
+                    
+                    Swal.fire({
+                        title: 'คัดลอกแล้ว!',
+                        text: 'คัดลอก SQL Query ไปยังคลิปบอร์ดแล้ว',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                },
+                // Helpers for styles
+                getStepBorderColor(stepKey) {
+                    const status = this.diagResult[stepKey].status;
+                    if (status === 'success') return 'border-l-emerald-500';
+                    if (status === 'error') return 'border-l-red-500';
+                    return 'border-l-gray-200';
+                },
+                getStepNodeColor(stepKey) {
+                    const status = this.diagResult[stepKey].status;
+                    if (status === 'success') return 'bg-emerald-500';
+                    if (status === 'error') return 'bg-red-500';
+                    return 'bg-gray-300';
+                },
+                getStepBadgeClass(stepKey) {
+                    const status = this.diagResult[stepKey].status;
+                    if (status === 'success') return 'bg-emerald-100 text-emerald-700';
+                    if (status === 'error') return 'bg-red-100 text-red-700';
+                    return 'bg-gray-100 text-gray-600';
+                },
+                formatNumber(val) {
+                    if (val === undefined || val === null) return '0';
+                    return accounting.formatNumber(val, 0);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

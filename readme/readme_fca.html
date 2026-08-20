@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FCA - เอกสารอธิบายลำดับการทำงาน Flex Shipment</title>
+  <!-- Google Fonts: Inter & Sarabun สำหรับภาษาไทย -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Mermaid.js -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      securityLevel: 'loose',
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis'
+      }
+    });
+  </script>
+  <style>
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --accent: #059669;
+      --accent-hover: #047857;
+      --accent-light: #d1fae5;
+      --border-color: #e2e8f0;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      --transition-fast: 0.15s ease;
+      --transition-normal: 0.25s ease;
+      --font-sans: 'Sarabun', 'Inter', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #060b13;
+      --bg-secondary: #0f172a;
+      --bg-tertiary: #1e293b;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --accent: #10b981;
+      --accent-hover: #34d399;
+      --accent-light: #064e3b;
+      --border-color: #334155;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.5);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      transition: background-color var(--transition-normal), color var(--transition-normal);
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      width: 280px;
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      padding: 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 10;
+      transition: background-color var(--transition-normal), border-color var(--transition-normal);
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .logo-icon {
+      background: linear-gradient(135deg, #059669, #10b981);
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 1.25rem;
+      box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3);
+    }
+
+    .logo-text h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.025em;
+    }
+
+    .logo-text span {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: block;
+      margin-top: -2px;
+    }
+
+    .nav-links {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .nav-item a {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      color: var(--text-secondary);
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: all var(--transition-fast);
+    }
+
+    .nav-item a:hover {
+      background-color: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active a {
+      background-color: var(--accent-light);
+      color: var(--accent);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Main Content Area */
+    .main-content {
+      margin-left: 280px;
+      flex-grow: 1;
+      padding: 2.5rem 3rem;
+      max-width: 1400px;
+      min-width: 0;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 3rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1.5rem;
+    }
+
+    .header-title h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-title p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    .theme-toggle {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-fast);
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.05);
+      border-color: var(--accent);
+    }
+
+    .card {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow var(--transition-normal), border-color var(--transition-normal);
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-md);
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.75rem;
+      color: var(--text-primary);
+    }
+
+    /* Tab Layouts */
+    .tab-container {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 0.5rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      position: relative;
+      transition: color var(--transition-fast);
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+      color: var(--accent);
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -0.6rem;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background-color: var(--accent);
+      border-radius: 2px;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    /* Mermaid Canvas */
+    .diagram-container {
+      background-color: #ffffff;
+      padding: 2rem;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+      box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    /* Interactive Accordion */
+    .accordion {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .accordion-item {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: border-color var(--transition-fast);
+    }
+
+    .accordion-item:hover {
+      border-color: var(--accent);
+    }
+
+    .accordion-header {
+      background-color: var(--bg-tertiary);
+      padding: 1rem 1.25rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+      transition: background-color var(--transition-fast);
+    }
+
+    .accordion-header:hover {
+      background-color: var(--bg-primary);
+    }
+
+    .accordion-icon {
+      font-size: 0.8rem;
+      transition: transform var(--transition-normal);
+    }
+
+    .accordion-item.open .accordion-icon {
+      transform: rotate(180deg);
+    }
+
+    .accordion-content {
+      display: none;
+      padding: 1.25rem;
+      background-color: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+    }
+
+    .accordion-item.open .accordion-content {
+      display: block;
+    }
+
+    /* Table styling */
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      background-color: var(--bg-tertiary);
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Badges & Code Blocks */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 9999px;
+      text-transform: uppercase;
+    }
+
+    .badge-primary { background-color: var(--accent-light); color: var(--accent); }
+    .badge-secondary { background-color: var(--bg-tertiary); color: var(--text-muted); }
+    .badge-success { background-color: #dcfce7; color: #15803d; }
+    .badge-warning { background-color: #fef9c3; color: #a16207; }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      background-color: var(--bg-tertiary);
+      padding: 0.15rem 0.3rem;
+      border-radius: 4px;
+      color: var(--accent);
+    }
+
+    pre code {
+      display: block;
+      padding: 1.25rem;
+      overflow-x: auto;
+      line-height: 1.5;
+      color: var(--text-primary);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .desc-list {
+      margin-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    
+    .desc-list li {
+      margin-bottom: 0.5rem;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Comparison Box */
+    .diff-box {
+      border-left: 4px solid var(--accent);
+      background-color: var(--bg-tertiary);
+      padding: 1.25rem;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+      .sidebar {
+        width: 60px;
+        padding: 2rem 0.5rem;
+        align-items: center;
+      }
+      .logo-text, .nav-text, .sidebar-footer span {
+        display: none;
+      }
+      .logo-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+      }
+      .main-content {
+        margin-left: 60px;
+        padding: 2rem;
+      }
+      .nav-item a {
+        justify-content: center;
+        padding: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="logo-container">
+      <div class="logo-icon">F</div>
+      <div class="logo-text">
+        <h1>FCA Integration</h1>
+        <span>โครงสร้างส่งข้อมูล Flex</span>
+      </div>
+    </div>
+    <nav>
+      <ul class="nav-links">
+        <li class="nav-item active" data-target="overview-section"><a href="#overview"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z"></path></svg><span class="nav-text">ภาพรวมระบบ</span></a></li>
+        <li class="nav-item" data-target="flowchart-section"><a href="#flowchart"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg><span class="nav-text">ไดอะแกรมการทำงาน</span></a></li>
+        <li class="nav-item" data-target="database-section"><a href="#database"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.58 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.58 4 8 4s8-1.79 8-4M4 7c0-2.21 3.58-4 8-4s8 1.79 8 4m0 5c0 2.21-3.58 4-8 4s-8-1.79-8-4"></path></svg><span class="nav-text">โครงสร้างฐานข้อมูล</span></a></li>
+        <li class="nav-item" data-target="logic-section"><a href="#logic"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg><span class="nav-text">คำอธิบายโค้ดโดยละเอียด</span></a></li>
+        <li class="nav-item" data-target="csv-section"><a href="#csv"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span class="nav-text">รูปแบบไฟล์ CSV</span></a></li>
+      </ul>
+    </nav>
+    <div class="sidebar-footer">
+      <span style="font-size: 0.8rem; color: var(--text-muted);">เอกสารอ้างอิง v1.0</span>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <header>
+      <div class="header-title">
+        <h2>ระบบเชื่อมโยงข้อมูลการส่งสินค้า FCA (Flex) ไปยัง WD</h2>
+        <p>เอกสารรายละเอียดขั้นตอนการทำงาน โครงสร้างข้อมูล ตารางฐานข้อมูล และข้อกำหนดรูปแบบไฟล์นำออก (CSV)</p>
+      </div>
+      <button class="theme-toggle" id="themeBtn" aria-label="เปลี่ยนโหมดสีธีม">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="theme-icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+      </button>
+    </header>
+
+    <!-- 1. Overview Section -->
+    <section id="overview-section" class="content-section">
+      <div class="card">
+        <div class="card-title">
+          <span class="badge badge-primary">ภาพรวม</span> ภาพรวมและการทำงานของระบบ
+        </div>
+        <p style="margin-bottom: 1rem;">
+          สคริปต์ **FCA (Flex)** ทำหน้าที่ดึงข้อมูลสรุปการส่งสินค้า (Shipment Confirm) ของใบสั่งส่งสินค้า (Delivery Order - DO) ในวันที่กำหนด โดยจะทำการสืบค้นข้อมูลใบยืนยันการจัดส่งสินค้า คัดแยกประเภทปลายทางของลูกค้าตามกลุ่มรหัส Prefix คิวรีรายละเอียดกล่องพาเลท และการแพ็กเกจผลิตจากฐานข้อมูลกลางของ Hitachi โดยตรง เพื่อจัดรูปแบบและจัดส่งอัปโหลดไฟล์ไปที่บอร์ดของ Western Digital Corporation (WDC) ผ่าน SFTP (<code>sftp2.wdc.com</code>)
+        </p>
+        <div class="diff-box">
+          <h5 style="font-weight: 700; margin-bottom: 0.5rem; color: var(--accent);">จุดที่แตกต่างอย่างมีนัยสำคัญจากระบบ ACA:</h5>
+          <ul class="desc-list" style="margin-bottom: 0; font-size: 0.95rem;">
+            <li><strong>การกรองจำกัดช่องทาง:</strong> เส้นทางการประมวลผลของ PRB ทั้งหมดถูกปิดใช้งานไว้ (Comment out) ในโค้ดตัวดำเนินการปัจจุบัน โดยสคริปต์จะกรองและทรานสเฟอร์ข้อมูลเฉพาะรายการกลุ่ม BPI Direct เท่านั้น</li>
+            <li><strong>ฐานข้อมูลที่เรียกใช้:</strong> ทำงานเชื่อมโยงบนตารางของ Flex / Hitachi (<code>HIT_*</code>) แทนที่ระบบ ACA เดิมที่เป็นของ Carriage</li>
+            <li><strong>ความสัมพันธ์ถาดบรรจุที่สั้นลง:</strong> เรียกใช้ประวัติจากตาราง <code>PROD_DATA</code> ของระบบฝั่ง Hitachi คีย์โดยตรงด้วยรหัส <code>prod_lot</code> ทำให้ไม่จำเป็นต้องผ่านตารางจับคู่วัสดุระดับกลาง (WMS FGREC Box/Pack)</li>
+            <li><strong>คอลัมน์ชื่อรุ่น (Build Name):</strong> มีการดึงค่าจากฟิลด์หมายเหตุ <code>WMS.HIT_FGREC_DATA.remark</code> ไปเขียนลงในคอลัมน์ Build Name ของ CSV ในขณะที่ ACA ปล่อยเป็นค่าว่าง</li>
+            <li><strong>ไม่มีการคำนวณวันหมดอายุ:</strong> ในฟิลด์ Remark สำหรับส่งออกเป็นวันหมดอายุของ FCA ถูกกำหนดให้ปล่อยเป็นค่าว่างเปล่า (<code>''</code>) ไม่คำนวณจาก PackKey แบบ ACA</li>
+            <li><strong>กุญแจความปลอดภัย SFTP:</strong> ล็อกอินเข้าใช้งานด้วยบัญชีผู้ใช้ <code>Belton</code> และคีย์การยืนยันตน <code>Belton.ppk</code></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Flowchart Section -->
+    <section id="flowchart-section" class="content-section" style="display: none;">
+      <div class="card">
+        <div class="card-title">
+          <span class="badge badge-primary">วิชวล</span> แผนภาพจำลองการทำงานของระบบ (Flowchart)
+        </div>
+        <div class="diagram-container">
+          <div class="mermaid">
+            graph TD
+              A["เริ่มต้นทำงาน: script_ftp_to_wd.php"] --> B["ดึงรายการ DO จาก WMS <br/> WMS.HIT_SHIP_CONFIRM"]
+              B --> C["ดึงการตั้งค่าคีย์นำหน้า Prefix <br/> WMS.HIT_SHIP_TO_MASTER"]
+              C --> D{"ตรวจสอบประเภท DO และปลายทาง"}
+              
+              D -- "PRB Direct (ปิดการทำงาน)" --> E1["จัดกลุ่มเป็น PRB Direct"]
+              D -- "PRB Hub (ปิดการทำงาน)" --> E2["จัดกลุ่มเป็น PRB Hub"]
+              D -- "BPI Direct" --> E3["จัดกลุ่มเป็น BPI Direct"]
+              
+              E3 --> F["เรียกฟังก์ชัน gen_data_and_send_file"]
+              
+              F --> G["ดึงข้อมูลเชื่อมโยงลอตผลิต WMS <br/> WMS.SHIPMENTDO_DATA <br/> WMS.SHIPMENTPALLET_BOX_PROD_HTC"]
+              G --> H["ดึงข้อมูลบาร์โค้ดสแกนการแพ็ก <br/> HITACHI.PROD_DATA <br/> HITACHI.PACK_HEADER"]
+              H --> I["ดึงหมายเหตุรุ่นการผลิตคลัง WMS <br/> WMS.HIT_FGREC_DATA"]
+              I --> J{"ตรวจสอบความถูกต้องจำนวนรวม"}
+              
+              J -- "ยอดจำนวนไม่ตรงกัน" --> K["แสดงข้อผิดพลาด Qty บนเซิร์ฟเวอร์"]
+              J -- "ยอดจำนวนตรงกันสมบูรณ์" --> L["สร้างไฟล์ CSV & สำรองลงโฟลเดอร์ QE"]
+              
+              L --> M["ล็อกอินระบบ SFTP ลูกค้า <br/> User: Belton <br/> Key: Belton.ppk"]
+              M --> N["ส่งไฟล์ขึ้นระบบ SFTP WDC sftp2.wdc.com"]
+              N --> O{"ตรวจสอบขนาดไฟล์บน SFTP"}
+              O -- "ขนาดไฟล์เป็น 0 bytes (ล้มเหลว)" --> P["ส่งอีเมลแจ้งข้อผิดพลาดไปยังทีม"]
+              O -- "อัปโหลดสมบูรณ์" --> Q["ปรับเพิ่มลำดับ Running Counter (+1)"]
+              Q --> R["บันทึกประวัติการส่งลง Log WMS.HIT_TRANSFER_DATA_LOG_FTP"]
+              R --> S["ส่งอีเมลรายงานผลสำเร็จไปยังผู้ใช้"]
+              S --> T["สิ้นสุดการทำงาน"]
+              
+              style A fill:#e6f4ea,stroke:#10b981,stroke-width:2px;
+              style E1 stroke-dasharray: 5 5,fill:#f1f5f9,color:#94a3b8;
+              style E2 stroke-dasharray: 5 5,fill:#f1f5f9,color:#94a3b8;
+              style K fill:#fee2e2,stroke:#dc2626,stroke-width:2px;
+              style T fill:#d1fae5,stroke:#059669,stroke-width:2px;
+              style J fill:#fef9c3,stroke:#ca8a04,stroke-width:2px;
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Database Section -->
+    <section id="database-section" class="content-section" style="display: none;">
+      <div class="card">
+        <div class="card-title">
+          <span class="badge badge-primary">ตาราง</span> โครงสร้างและรายละเอียดตารางฐานข้อมูล
+        </div>
+        <p style="margin-bottom: 1.5rem; color: var(--text-muted);">รายละเอียดตารางฐานข้อมูลภายในระบบ WMS และฐานข้อมูลสายการผลิตที่ใช้ในการอ้างอิงข้อมูล FCA</p>
+        
+        <div class="accordion">
+          
+          <!-- Table 1 -->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <span>1. WMS.HIT_SHIP_CONFIRM</span>
+              <span class="accordion-icon">▼</span>
+            </div>
+            <div class="accordion-content">
+              <p style="margin-bottom: 0.75rem;">เก็บประวัติการยืนยันจัดส่งสินค้าของผลิตภัณฑ์สาย Flex เพื่อดึงใบสั่งส่งของประจำวัน โดยกรองเฉพาะรายการที่ยังไม่ถูกส่ง (ไม่ปรากฏในประวัติ Log)</p>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ชื่อฟิลด์</th>
+                      <th>ประเภทข้อมูล</th>
+                      <th>คำอธิบาย</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td><code>do</code></td><td>VARCHAR</td><td>เลขที่ใบสั่งส่งสินค้า / ใบกำกับสินค้า (DO Number)</td></tr>
+                    <tr><td><code>plan_id</code></td><td>VARCHAR</td><td>หมายเลขแผนงานการจัดส่ง (Shipment Plan ID)</td></tr>
+                    <tr><td><code>pallet_no</code></td><td>VARCHAR</td><td>รหัสพาเลทสินค้า (Pallet Number)</td></tr>
+                    <tr><td><code>box_detail</code></td><td>VARCHAR</td><td>ข้อมูลบาร์โค้ดกล่องและรายละเอียดสินค้า</td></tr>
+                    <tr><td><code>date</code></td><td>DATETIME</td><td>วันที่บันทึกการยืนยันจัดส่ง</td></tr>
+                    <tr><td><code>type</code></td><td>VARCHAR</td><td>ประเภทธุรกรรม (กำหนดดึงเฉพาะ <code>'PACK'</code>)</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Table 2 -->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <span>2. WMS.HIT_SHIP_TO_MASTER</span>
+              <span class="accordion-icon">▼</span>
+            </div>
+            <div class="accordion-content">
+              <p style="margin-bottom: 0.75rem;">ตารางบันทึกปลายทางจัดส่งและรหัสประเภทปลายทางโดยอ้างอิงจากตัวอักษรนำหน้าของ DO สำหรับสาย Flex</p>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ชื่อฟิลด์</th>
+                      <th>ประเภทข้อมูล</th>
+                      <th>คำอธิบาย</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td><code>prefix</code></td><td>VARCHAR</td><td>ตัวอักษรนำหน้า 4 ตัวแรกของรหัส DO</td></tr>
+                    <tr><td><code>ship_to</code></td><td>VARCHAR</td><td>รหัสที่ตั้งคลังสินค้าปลายทางของ WDC</td></tr>
+                    <tr><td><code>type</code></td><td>VARCHAR</td><td>ประเภทของการขนส่ง (เช่น <code>'PRB'</code> หรือ <code>'BPI'</code>)</td></tr>
+                    <tr><td><code>status</code></td><td>VARCHAR</td><td>สถานะการใช้งานปลายทาง (ดึงเฉพาะ <code>'active'</code>)</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Table 3 -->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <span>3. WMS.SHIPMENTPALLET_BOX_PROD_HTC</span>
+              <span class="accordion-icon">▼</span>
+            </div>
+            <div class="accordion-content">
+              <p style="margin-bottom: 0.75rem;">ตารางเชื่อมโยงระดับ WMS สำหรับเชื่อมโยงหมายเลขแผนจัดจัดส่งของ Flex เข้ากับลอตผลิต (Production Lot) และลอตจัดเก็บคลังสินค้า (Store Lot)</p>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ชื่อฟิลด์</th>
+                      <th>ประเภทข้อมูล</th>
+                      <th>คำอธิบาย</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td><code>plan_id</code></td><td>VARCHAR</td><td>หมายเลขแผนการส่งออก</td></tr>
+                    <tr><td><code>store_lot</code></td><td>VARCHAR</td><td>หมายเลขลอตคลังสินค้า (Store Lot)</td></tr>
+                    <tr><td><code>prod_lot</code></td><td>VARCHAR</td><td>หมายเลขลอตการผลิตจริง (Production Lot)</td></tr>
+                    <tr><td><code>qty</code></td><td>INT</td><td>จำนวนกล่องชิ้นงาน</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Table 4 -->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <span>4. HITACHI.PROD_DATA (ฐานข้อมูลฝั่งผลิต: HITACHI02)</span>
+              <span class="accordion-icon">▼</span>
+            </div>
+            <div class="accordion-content">
+              <p style="margin-bottom: 0.75rem;">ข้อมูลที่อยู่บนเครื่องสแกนบาร์โค้ดของโรงงานฝั่ง Flex</p>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ชื่อฟิลด์</th>
+                      <th>ประเภทข้อมูล</th>
+                      <th>คำอธิบาย</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td><code>prod_lot</code></td><td>VARCHAR</td><td>หมายเลขลอตผลิตอ้างอิงหลัก</td></tr>
+                    <tr><td><code>pack_id</code></td><td>VARCHAR</td><td>รหัสหมายเลขอ้างอิงการแพ็กเกจบรรจุ</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Table 5 -->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <span>5. WMS.HIT_FGREC_DATA</span>
+              <span class="accordion-icon">▼</span>
+            </div>
+            <div class="accordion-content">
+              <p style="margin-bottom: 0.75rem;">ตารางระบบ WMS ที่เก็บชื่อรุ่น หรือข้อกำหนดและบันทึกข้อความเฉพาะลอตผลิตนั้นๆ (Remark)</p>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ชื่อฟิลด์</th>
+                      <th>ประเภทข้อมูล</th>
+                      <th>คำอธิบาย</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td><code>prod_lot</code></td><td>VARCHAR</td><td>หมายเลขลอตผลิตอ้างอิง</td></tr>
+                    <tr><td><code>remark</code></td><td>VARCHAR</td><td>หมายเหตุรายละเอียดรุ่นการผลิต (เขียนนำออกคอลัมน์ Build Name ในรายงาน)</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Logic Section -->
+    <section id="logic-section" class="content-section" style="display: none;">
+      <div class="card">
+        <div class="card-title">
+          <span class="badge badge-primary">ตรรกะ</span> ขั้นตอนการประมวลผลและการทำงานโดยละเอียด
+        </div>
+        
+        <div class="tab-container">
+          <button class="tab-btn active" data-tab="step1">1. การจัดกลุ่มและคัดกรอง</button>
+          <button class="tab-btn" data-tab="step2">2. การดึงเชื่อมโยงข้อมูล</button>
+          <button class="tab-btn" data-tab="step3">3. การจัดส่งและประวัติระบบ</button>
+        </div>
+
+        <!-- Tab 1 -->
+        <div id="step1" class="tab-content active">
+          <h4 style="margin-bottom: 0.5rem; color: var(--accent);">การคัดกรอง DO และการระงับกลุ่ม PRB</h4>
+          <p style="margin-bottom: 1rem;">
+            สคริปต์เริ่มต้นอ่านข้อมูล DO ประจำวันจากฐานข้อมูล:
+          </p>
+          <pre><code>$aDOdata = getDO($current_date);</code></pre>
+          <p style="margin-top: 1rem; margin-bottom: 0.5rem;">
+            วิเคราะห์คีย์นำหน้า 4 ตัวแรกเพื่อคัดแยกประเภทการขนส่ง แต่ในโค้ดมีเงื่อนไขจำกัดดังนี้:
+          </p>
+          <ul class="desc-list">
+            <li><strong>กลุ่ม PRB ถูกข้ามการทำงาน:</strong> ในโค้ดควบคุม <code>script_ftp_to_wd.php</code> มีการปิดบรรทัดเรียกฟังก์ชันของ PRB ทั้งหมด (PRB Direct และ PRB Hub)</li>
+            <li><strong>ส่งออกเฉพาะ BPI:</strong> ระบบจะเรียกใช้ฟังก์ชันเฉพาะเมื่อพบกลุ่มข้อมูล <code>$do_bpi_direct</code> เท่านั้น โดยส่งพารามิเตอร์ประเภทปลายทางเป็นแบบ Hub</li>
+          </ul>
+        </div>
+
+        <!-- Tab 2 -->
+        <div id="step2" class="tab-content">
+          <h4 style="margin-bottom: 0.5rem; color: var(--accent);">การดึงและสืบค้นข้อมูลสายผลิตภัณฑ์ Flex</h4>
+          <p style="margin-bottom: 1rem;">
+            ขั้นตอนในฟังก์ชัน <code>gen_data_and_send_file()</code> สำหรับดึงข้อมูลสายผลิตของ Flex:
+          </p>
+          <ol class="desc-list" style="margin-left: 1.5rem;">
+            <li><code>getProdWMS($do_list)</code>: เชื่อมโยงใบสั่ง DO เข้ากับลอตผลิตของระบบ Flex (<code>WMS.SHIPMENTPALLET_BOX_PROD_HTC</code>)</li>
+            <li><code>getShip_confirm_data($prod_lots)</code>: ดึงข้อมูลยืนยันจัดส่ง พาเลทสินค้า และชื่อที่ใช้แสดงของการส่งมอบกล่อง</li>
+            <li><code>getPack($prod_lots)</code>: เชื่อมโยงฐานข้อมูลการผลิตของฝั่ง Hitachi (<code>HITACHI02</code>) โดยตรงเพื่อดึงหมายเลขรหัสแพ็กและขนาดข้อมูลบรรจุภัณฑ์</li>
+            <li><code>getremark_in_wms_hit_fgrec_data($prod_lot)</code>: ดึงหมายเหตุข้อความจากตาราง <code>WMS.HIT_FGREC_DATA</code> เพื่อเตรียมระบุลงในหัวข้อคอลัมน์รายงาน Build Name</li>
+          </ol>
+        </div>
+
+        <!-- Tab 3 -->
+        <div id="step3" class="tab-content">
+          <h4 style="margin-bottom: 0.5rem; color: var(--accent);">การจัดส่งข้อมูลอัปโหลดผ่าน SFTP และประวัติการบันทึก</h4>
+          <p style="margin-bottom: 1rem;">
+            เมื่อระบบเปรียบเทียบยอดสินค้าถูกต้อง:
+          </p>
+          <ul class="desc-list">
+            <li><strong>เขียนบันทึกไฟล์:</strong> บันทึกข้อมูลออกมาเป็นไฟล์ CSV ภายในไดเรกทอรีเฉพาะบนเซิร์ฟเวอร์</li>
+            <li><strong>สำรองประวัติ:</strong> สำรองไฟล์ลงประวัติ QE <code>/file_bit_qe/</code></li>
+            <li><strong>เชื่อมโยง SFTP:</strong> ล็อกอินเข้าใช้งานระบบคลาวด์ปลายทางของลูกค้า <code>sftp2.wdc.com</code> ด้วยบัญชี <code>Belton</code> และกุญแจเข้ารหัสความปลอดภัย <code>Belton.ppk</code></li>
+            <li><strong>บันทึกล็อก:</strong> ทำการเพิ่มค่าลำดับ Counter (+1) ในตาราง <code>WMS.HIT_RUNNING_TRANSFER_CUSTOMER_FTP</code> และเพิ่มประวัติลงตาราง <code>WMS.HIT_TRANSFER_DATA_LOG_FTP</code> เพื่อปิดรับ DO ที่จัดทำสำเร็จเรียบร้อยแล้ว</li>
+          </ul>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 5. CSV Layout Section -->
+    <section id="csv-section" class="content-section" style="display: none;">
+      <div class="card">
+        <div class="card-title">
+          <span class="badge badge-primary">ส่งออก</span> ข้อกำหนดโครงสร้างชื่อไฟล์และรูปแบบข้อมูล CSV
+        </div>
+        
+        <h4 style="margin-bottom: 0.75rem;">กฎการตั้งชื่อไฟล์ส่งออก (Filename Rule)</h4>
+        <div style="background-color: var(--bg-tertiary); padding: 1rem; border-radius: 8px; font-family: var(--font-mono); font-size: 0.9rem; margin-bottom: 1.5rem; border: 1px solid var(--border-color);">
+          {Prefix}_{Type}_{YYYYMMDD}_000000_BEL_FLEX_{ModelName}_{RunningNo}.csv
+        </div>
+        <p style="margin-bottom: 1.5rem;">
+          ตัวอย่างชื่อไฟล์จริง: <code>S0005_BPI_20260810_000000_BEL_FLEX_ModelY_001.csv</code>
+          <br>รหัสคีย์นำหน้าไฟล์: <code>S0005</code> (กรณีคลังปลายทางแบบ Hub) หรือ <code>Z0005</code> (กรณีส่งตรง Direct)
+        </p>
+
+        <h4 style="margin-bottom: 0.75rem;">ผังตารางข้อมูลคอลัมน์ใน CSV (CSV Header Specification)</h4>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ลำดับคอลัมน์</th>
+                <th>ชื่อหัวข้อ (Header)</th>
+                <th>ตรรกะโปรแกรม / ข้อมูลนำเข้า</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td><code>SupplierName</code></td><td>ค่าคงที่: <code>'Belton'</code></td></tr>
+              <tr><td>2</td><td><code>PartName</code></td><td>ค่าคงที่: <code>'FCA'</code></td></tr>
+              <tr><td>3</td><td><code>SHIPDATE</code></td><td>วันที่ส่งมอบสินค้าจากตาราง <code>WMS.HIT_SHIP_CONFIRM</code> (ฟอร์แมต: <code>d-M-Y</code>)</td></tr>
+              <tr><td>4</td><td><code>INVNUM</code></td><td>หมายเลขใบกำกับสินค้า (DO Number)</td></tr>
+              <tr><td>5</td><td><code>Transfer Order</code></td><td>หมายเลขใบสั่งซื้อของลูกค้า (PO Number)</td></tr>
+              <tr><td>6</td><td><code>PARTNUMBER</code></td><td>รหัสพาร์ตสินค้าของลูกค้า</td></tr>
+              <tr><td>7</td><td><code>Pallet Number</code></td><td>รหัสหมายเลขพาเลทสินค้า</td></tr>
+              <tr><td>8</td><td><code>MODEL</code></td><td>ชื่อรุ่นผลิตภัณฑ์ (ดึงข้อมูลจากตาราง Oracle Item Master)</td></tr>
+              <tr><td>9</td><td><code>Plt</code></td><td>ค่าคงที่: <code>'1'</code></td></tr>
+              <tr><td>10</td><td><code>QTY</code></td><td>จำนวนรวมบนพาเลทจัดส่ง</td></tr>
+              <tr><td>11</td><td><code>SUBINVENTORY</code></td><td>รหัสคลังย่อยสินค้า (<code>'RMCOI-T2'</code> กรณีส่งตรง Direct, หากส่งผ่าน Hub จะปล่อยว่าง)</td></tr>
+              <tr><td>12</td><td><code>Build Name</code></td><td>ดึงคำอธิบายข้อความหมายเหตุชิ้นงานจากฟิลด์ <code>WMS.HIT_FGREC_DATA.remark</code></td></tr>
+              <tr><td>13</td><td><code>ETA</code></td><td>ปล่อยว่าง (<code>''</code>)</td></tr>
+              <tr><td>14</td><td><code>Time</code></td><td>ปล่อยว่าง (<code>''</code>)</td></tr>
+              <tr><td>15</td><td><code>shipper</code></td><td>ปล่อยว่าง (<code>''</code>)</td></tr>
+              <tr><td>16</td><td><code>Truck or Air</code></td><td>ค่าคงที่: <code>'Truck'</code></td></tr>
+              <tr><td>17</td><td><code>Ship to</code></td><td>รหัสคลังปลายทางรับสินค้าของลูกค้า</td></tr>
+              <tr><td>18</td><td><code>DN#</code></td><td>ปล่อยว่าง (<code>''</code>)</td></tr>
+              <tr><td>19</td><td><code>Remark</code></td><td>ปล่อยว่าง (<code>''</code>) - [ไม่มีการส่งออกวันหมดอายุของสาย Flex]</td></tr>
+              <tr><td>20</td><td><code>BOXID</code></td><td>รหัสระบุด้านกล่องในฟอร์แมต: <code>{DO Number}||{Box Qty}||{Box Ship Name}</code></td></tr>
+              <tr><td>21</td><td><code>BOXQTY</code></td><td>จำนวนชิ้นสินค้าในกล่องชิ้นงาน</td></tr>
+              <tr><td>22</td><td><code>PACKID</code></td><td>หมายเลขการแพ็กเกจ (Pack ID) จากฐานข้อมูลสายสแกน</td></tr>
+              <tr><td>23</td><td><code>PACKQTY</code></td><td>จำนวนสินค้าตรวจเช็กได้ในบรรจุภัณฑ์</td></tr>
+              <tr><td>24</td><td><code>TRAYID</code></td><td>ปล่อยว่าง (<code>''</code>)</td></tr>
+              <tr><td>25</td><td><code>SERIAL</code></td><td>ปล่อยว่าง (<code>''</code>)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Theme Switcher
+    const themeBtn = document.getElementById('themeBtn');
+    themeBtn.addEventListener('click', () => {
+      const currentTheme = document.body.getAttribute('data-theme');
+      if (currentTheme === 'dark') {
+        document.body.removeAttribute('data-theme');
+        themeBtn.innerHTML = `<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>`;
+      } else {
+        document.body.setAttribute('data-theme', 'dark');
+        themeBtn.innerHTML = `<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"></path></svg>`;
+      }
+    });
+
+    // Navigation Switcher
+    const navItems = document.querySelectorAll('.nav-item');
+    const sections = document.querySelectorAll('.content-section');
+    navItems.forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        navItems.forEach(nav => nav.classList.remove('active'));
+        item.classList.add('active');
+        
+        const targetSection = item.getAttribute('data-target');
+        sections.forEach(sec => {
+          if (sec.id === targetSection) {
+            sec.style.display = 'block';
+            sec.style.animation = 'fadeIn 0.3s ease';
+          } else {
+            sec.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    // Tab Switcher
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        
+        btn.classList.add('active');
+        const targetTab = btn.getAttribute('data-tab');
+        document.getElementById(targetTab).classList.add('active');
+      });
+    });
+
+    // Accordion Toggle
+    const accHeaders = document.querySelectorAll('.accordion-header');
+    accHeaders.forEach(header => {
+      header.addEventListener('click', () => {
+        const item = header.parentElement;
+        item.classList.toggle('open');
+      });
+    });
+  </script>
+</body>
+</html>
